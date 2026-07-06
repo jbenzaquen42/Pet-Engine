@@ -1,21 +1,13 @@
 import {
   Activity,
   AlarmClock,
-  Bell,
   Check,
-  ChevronRight,
   Circle,
   Clock3,
-  Dog,
-  Eye,
-  EyeOff,
-  Footprints,
   Home,
   Keyboard,
   ListTodo,
   Minus,
-  Moon,
-  MousePointer2,
   NotebookPen,
   PanelRightClose,
   PanelRightOpen,
@@ -23,12 +15,10 @@ import {
   Pin,
   Play,
   Plus,
-  RotateCcw,
   Sparkles,
   TimerReset,
   Trash2,
-  X,
-  Zap
+  X
 } from "lucide-react";
 import type { Dispatch, PointerEvent, ReactNode, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -48,7 +38,9 @@ import {
   getPetSize,
   reconcileRuntime
 } from "./behaviorEngine";
-import { PetAvatar } from "./PetAvatar";
+import { CommandBar } from "./components/CommandBar";
+import { CompanionTray } from "./components/CompanionTray";
+import { PetStage } from "./components/PetStage";
 import { uid, useLocalStorageState } from "./storage";
 import type { Behavior, EngineSettings, PetProfile, PetRuntime, TaskItem } from "./types";
 
@@ -411,7 +403,7 @@ function App() {
       />
 
       <section className="workspace">
-        <PetRail
+        <CompanionTray
           companions={companions}
           selectedPetId={selectedPetId}
           onSelect={setSelectedPetId}
@@ -436,44 +428,16 @@ function App() {
             </div>
           </div>
 
-          <div className="pet-stage" ref={stageRef} aria-label="Desktop pet stage">
-            <div className="stage-floor" />
-            {summonedCompanions.map((pet) => {
-              const current = petRuntimeMap.get(pet.id);
-              if (!current) {
-                return null;
-              }
+          <PetStage
+            stageRef={stageRef}
+            companions={summonedCompanions}
+            runtimeMap={petRuntimeMap}
+            selectedPetId={selectedPetId}
+            settings={settings}
+            onPetPointerDown={onPetPointerDown}
+          />
 
-              const size = getPetSize(pet, settings);
-              const isSelected = pet.id === selectedPetId;
-
-              return (
-                <button
-                  className={`pet-actor ${isSelected ? "selected" : ""} behavior-${current.behavior}`}
-                  key={pet.id}
-                  style={{
-                    width: size,
-                    height: size * 0.84,
-                    transform: `translate3d(${current.x}px, ${current.y}px, 0) scaleX(${current.direction})`,
-                    ["--pet-phase" as string]: current.phase
-                  }}
-                  onPointerDown={(event) => onPetPointerDown(pet.id, event)}
-                  aria-label={`${pet.name}, ${current.behavior}`}
-                >
-                  <span className="pet-hitbox">
-                    <PetAvatar pet={pet} behavior={current.behavior} />
-                  </span>
-                  {settings.showNames && (
-                    <span className="pet-name" style={{ transform: `scaleX(${current.direction})` }}>
-                      {pet.name}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <BehaviorBar
+          <CommandBar
             selectedPet={selectedPet}
             settings={settings}
             onSettingsChange={updateSettings}
@@ -551,130 +515,6 @@ function TopBar({ alwaysOnTop, desktopMode, onTogglePin, onToggleDesktop }: TopB
         </IconButton>
       </div>
     </header>
-  );
-}
-
-interface PetRailProps {
-  companions: PetProfile[];
-  selectedPetId: string;
-  onSelect: (id: string) => void;
-  onToggleSummoned: (id: string, summoned: boolean) => void;
-}
-
-function PetRail({ companions, selectedPetId, onSelect, onToggleSummoned }: PetRailProps) {
-  return (
-    <aside className="pet-rail">
-      <div className="rail-section">
-        <div className="section-title">
-          <Dog size={16} />
-          Pets
-        </div>
-        <div className="pet-list">
-          {companions.map((pet) => (
-            <div className={`pet-card ${selectedPetId === pet.id ? "active" : ""}`} key={pet.id}>
-              <button
-                type="button"
-                className="pet-card-select"
-                onClick={() => (pet.summoned ? onSelect(pet.id) : undefined)}
-                disabled={!pet.summoned}
-              >
-                <span className="pet-thumb">
-                  <PetAvatar pet={pet} compact />
-                </span>
-                <span>
-                  <strong>{pet.name}</strong>
-                  <small>{pet.breedLabel}</small>
-                </span>
-                <ChevronRight size={16} />
-              </button>
-              {!pet.locked && (
-                <IconButton
-                  active={pet.summoned}
-                  label={pet.summoned ? "Hide" : "Summon"}
-                  onClick={() => onToggleSummoned(pet.id, !pet.summoned)}
-                >
-                  {pet.summoned ? <EyeOff size={16} /> : <Eye size={16} />}
-                </IconButton>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-interface BehaviorBarProps {
-  selectedPet?: PetProfile;
-  settings: EngineSettings;
-  onSettingsChange: (patch: Partial<EngineSettings>) => void;
-  onCommand: (behavior: Behavior, target?: "selected" | "all") => void;
-  onCall: () => void;
-  onReset: () => void;
-}
-
-function BehaviorBar({ selectedPet, settings, onSettingsChange, onCommand, onCall, onReset }: BehaviorBarProps) {
-  return (
-    <footer className="behavior-bar">
-      <div className="behavior-group">
-        <span className="selected-label">{selectedPet?.name ?? "Pet"}</span>
-        <IconButton label="Walk" onClick={() => onCommand("walk")}>
-          <Footprints size={18} />
-        </IconButton>
-        <IconButton label="Sit" onClick={() => onCommand("sit")}>
-          <MousePointer2 size={18} />
-        </IconButton>
-        <IconButton label="Nap" onClick={() => onCommand("sleep")}>
-          <Moon size={18} />
-        </IconButton>
-        <IconButton label="Jump" onClick={() => onCommand("jump")}>
-          <Zap size={18} />
-        </IconButton>
-        <IconButton label="Call" onClick={onCall}>
-          <Bell size={18} />
-        </IconButton>
-      </div>
-
-      <div className="behavior-group">
-        <IconButton label="Group jump" onClick={() => onCommand("jump", "all")}>
-          <Sparkles size={18} />
-        </IconButton>
-        <IconButton label="Reset positions" onClick={onReset}>
-          <RotateCcw size={18} />
-        </IconButton>
-        <IconButton active={settings.physics} label="Physics" onClick={() => onSettingsChange({ physics: !settings.physics })}>
-          <Activity size={18} />
-        </IconButton>
-        <IconButton active={settings.showNames} label="Name tags" onClick={() => onSettingsChange({ showNames: !settings.showNames })}>
-          {settings.showNames ? <Eye size={18} /> : <EyeOff size={18} />}
-        </IconButton>
-      </div>
-
-      <div className="slider-group">
-        <label>
-          Scale
-          <input
-            type="range"
-            min="0.75"
-            max="1.35"
-            step="0.01"
-            value={settings.globalScale}
-            onChange={(event) => onSettingsChange({ globalScale: Number(event.target.value) })}
-          />
-        </label>
-        <label>
-          Pace
-          <input
-            type="range"
-            min="0.5"
-            max="1.6"
-            step="0.01"
-            value={settings.globalSpeed}
-            onChange={(event) => onSettingsChange({ globalSpeed: Number(event.target.value) })}
-          />
-        </label>
-      </div>
-    </footer>
   );
 }
 

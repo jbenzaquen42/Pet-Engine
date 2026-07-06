@@ -101,7 +101,7 @@ button {
   gap: 12px;
 }
 
-.pet-rail,
+.companion-tray,
 .tool-drawer,
 .stage-wrap {
   border: 1px solid rgb(216 224 226 / 0.86);
@@ -111,7 +111,7 @@ button {
   min-height: 0;
 }
 
-.pet-rail {
+.companion-tray {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -119,7 +119,7 @@ button {
   overflow: auto;
 }
 
-.rail-section {
+.tray-section {
   display: grid;
   gap: 10px;
 }
@@ -191,6 +191,62 @@ button {
   margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.catalog-section {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.catalog-pet {
+  min-width: 0;
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 760;
+  text-align: left;
+}
+
+.catalog-pet.summoned {
+  border-color: rgb(42 157 149 / 0.42);
+  background: #e9f7f5;
+}
+
+.catalog-thumb {
+  width: 44px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.clear-catalog {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 760;
 }
 
 .editor-section {
@@ -795,7 +851,7 @@ textarea {
 }
 
 .desktop-mode .top-bar,
-.desktop-mode .pet-rail,
+.desktop-mode .companion-tray,
 .desktop-mode .tool-drawer,
 .desktop-mode .stage-header,
 .desktop-mode .behavior-bar,
@@ -805,7 +861,7 @@ textarea {
 }
 
 .desktop-mode .top-bar:hover,
-.desktop-mode .pet-rail:hover,
+.desktop-mode .companion-tray:hover,
 .desktop-mode .tool-drawer:hover,
 .desktop-mode .stage-header:hover,
 .desktop-mode .behavior-bar:hover,
@@ -869,7 +925,7 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .pet-rail {
+  .companion-tray {
     max-height: none;
   }
 
