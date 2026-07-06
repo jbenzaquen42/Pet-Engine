@@ -30,7 +30,7 @@
 - [x] Task 1: Companion Data, Storage Migration, and Test Harness
 - [x] Task 2: Behavior Engine Extraction
 - [x] Task 3: App State Wiring and Summon/Hide Flow
-- [ ] Task 4: Authored Martyn and Charles Avatars
+- [x] Task 4: Authored Martyn and Charles Avatars
 - [ ] Task 5: Companion Tray, Stage, and Command Components
 - [ ] Task 6: Tool Drawer Extraction and Click-Through Desktop Recovery
 - [ ] Task 7: Visual QA, Tuning, and Final Verification
