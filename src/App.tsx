@@ -995,7 +995,8 @@ function createInitialRuntime(pets: PetProfile[]): PetRuntime[] {
     behavior: index === 1 ? "walk" : "idle",
     vy: 0,
     phase: Math.random() * Math.PI,
-    stateStartedAt: now - index * 650
+    stateStartedAt: now - index * 650,
+    lastInteractionAt: now - index * 650
   }));
 }
 
