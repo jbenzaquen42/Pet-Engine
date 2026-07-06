@@ -54,7 +54,12 @@ export function getSummonedCompanions(companions: PetProfile[]) {
 }
 
 export function findSelectedCompanion(companions: PetProfile[], selectedId: string | undefined) {
-  return companions.find((pet) => pet.id === selectedId && pet.summoned) ?? getSummonedCompanions(companions)[0];
+  const summoned = getSummonedCompanions(companions);
+  return (
+    companions.find((pet) => pet.id === selectedId && pet.summoned) ??
+    summoned[0] ??
+    companions.find((pet) => pet.locked)
+  );
 }
 
 export function setCompanionSummoned(companions: PetProfile[], id: string, summoned: boolean) {

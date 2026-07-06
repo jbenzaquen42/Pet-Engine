@@ -58,4 +58,11 @@ describe("companion state", () => {
     expect(getSummonedCompanions(companions).map((pet) => pet.id)).toContain("bag");
     expect(findSelectedCompanion(companions, "missing")?.id).toBe("martyn");
   });
+
+  it("falls back to a locked companion when no companions are summoned at all", () => {
+    const companions = initialCompanionState.companions.map((pet) => ({ ...pet, summoned: false }));
+
+    expect(getSummonedCompanions(companions)).toHaveLength(0);
+    expect(findSelectedCompanion(companions, "missing")?.locked).toBe(true);
+  });
 });

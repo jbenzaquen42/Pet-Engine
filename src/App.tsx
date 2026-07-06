@@ -41,6 +41,7 @@ import {
 } from "./companionState";
 import {
   advanceCompanion,
+  clamp,
   commandRuntime,
   createInitialRuntime,
   getGroundY,
@@ -853,10 +854,6 @@ function Metric({ icon, label, value }: { icon: ReactNode; label: string; value:
       <small>{label}</small>
     </div>
   );
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
 }
 
 function formatTimer(seconds: number) {
