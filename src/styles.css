@@ -456,6 +456,26 @@ textarea:focus {
   }
 }
 
+.pose-watch {
+  transform-origin: 50% 90%;
+  animation: pet-breathe 2.4s ease-in-out infinite;
+}
+
+.pose-stretch {
+  transform-origin: 50% 95%;
+  animation: pet-stretch 1.45s ease-in-out infinite;
+}
+
+@keyframes pet-stretch {
+  0%,
+  100% {
+    scale: 1;
+  }
+  42% {
+    scale: 1.08 0.94;
+  }
+}
+
 .behavior-bar {
   display: grid;
   grid-template-columns: auto auto minmax(180px, 260px);

@@ -13,7 +13,11 @@ const face = "#563927";
 export function PetAvatar({ pet, behavior = "idle", compact = false }: PetAvatarProps) {
   const props = { pet, behavior, compact };
 
-  switch (pet.pattern) {
+  switch (pet.avatar) {
+    case "martyn":
+      return <MartynAvatar {...props} />;
+    case "charles":
+      return <CharlesAvatar {...props} />;
     case "punching-bag":
       return <PunchingBag {...props} />;
     case "keyboard-buddy":
@@ -48,6 +52,91 @@ function SvgShell({
       {!compact && <ellipse className="soft-shadow" cx="92" cy="132" rx="52" ry="9" />}
       {children}
     </svg>
+  );
+}
+
+function MartynAvatar({ pet, behavior, compact }: Required<PetAvatarProps>) {
+  const sleeping = behavior === "sleep";
+  const watch = behavior === "watch";
+  const poseClass = `martyn-avatar pose-${behavior}`;
+
+  return (
+    <SvgShell label={`${pet.name} ${pet.breedLabel}`} compact={compact}>
+      <g className={poseClass}>
+        <ellipse className="soft-shadow" cx="92" cy="132" rx="48" ry="8" opacity={compact ? 0 : 1} />
+        <path
+          d={watch ? "M56 87 C58 54 76 34 101 34 C128 34 145 57 143 88 C141 116 120 128 96 127 C70 126 54 113 56 87Z" : "M48 94 C52 63 76 45 108 47 C135 49 151 67 148 96 C145 119 121 130 91 126 C64 123 45 113 48 94Z"}
+          fill={pet.primaryColor}
+          stroke={outline}
+          strokeWidth="5"
+          strokeLinejoin="round"
+        />
+        <path d="M70 55 L81 29 L95 51Z" fill={pet.primaryColor} stroke={outline} strokeWidth="5" strokeLinejoin="round" />
+        <path d="M121 51 L137 31 L140 59Z" fill={pet.primaryColor} stroke={outline} strokeWidth="5" strokeLinejoin="round" />
+        <path d="M82 38 C94 28 119 30 128 48 C112 45 96 46 82 38Z" fill={pet.secondaryColor} />
+        <path d="M122 95 C145 99 153 117 139 127 C124 124 119 110 122 95Z" fill={pet.secondaryColor} stroke={outline} strokeWidth="5" strokeLinejoin="round" />
+        <ellipse cx="102" cy="84" rx="27" ry="21" fill="#fffaf2" opacity="0.95" />
+        {sleeping ? (
+          <>
+            <path d="M83 71 C90 77 98 77 105 71" fill="none" stroke={face} strokeWidth="4" strokeLinecap="round" />
+            <path d="M113 71 C120 77 128 77 135 71" fill="none" stroke={face} strokeWidth="4" strokeLinecap="round" />
+          </>
+        ) : (
+          <>
+            <circle cx="91" cy={watch ? 67 : 70} r="4.5" fill={pet.eyeColor} />
+            <circle cx="121" cy={watch ? 67 : 70} r="4.5" fill={pet.eyeColor} />
+          </>
+        )}
+        <ellipse cx="106" cy="82" rx="6" ry="4" fill={face} />
+        <path d="M106 86 C100 92 93 92 87 88" fill="none" stroke={face} strokeWidth="3.5" strokeLinecap="round" />
+        <path d="M107 86 C112 92 119 92 125 88" fill="none" stroke={face} strokeWidth="3.5" strokeLinecap="round" />
+        <path d="M76 113 C83 121 94 121 101 113" fill="none" stroke={outline} strokeWidth="7" strokeLinecap="round" />
+        <path d="M127 113 C120 121 110 121 103 113" fill="none" stroke={outline} strokeWidth="7" strokeLinecap="round" />
+      </g>
+    </SvgShell>
+  );
+}
+
+function CharlesAvatar({ pet, behavior, compact }: Required<PetAvatarProps>) {
+  const sleeping = behavior === "sleep";
+  const stretch = behavior === "stretch";
+  const poseClass = `charles-avatar pose-${behavior}`;
+
+  return (
+    <SvgShell label={`${pet.name} ${pet.breedLabel}`} compact={compact}>
+      <g className={poseClass}>
+        <ellipse className="soft-shadow" cx="92" cy="132" rx={stretch ? "58" : "50"} ry="8" opacity={compact ? 0 : 1} />
+        <path
+          d={stretch ? "M35 96 C48 67 78 53 118 58 C145 61 159 76 153 101 C146 126 103 131 67 122 C45 117 29 109 35 96Z" : "M49 88 C51 57 73 35 101 35 C130 35 148 58 146 88 C144 115 122 128 95 127 C68 126 47 114 49 88Z"}
+          fill={pet.primaryColor}
+          stroke={outline}
+          strokeWidth="5"
+          strokeLinejoin="round"
+        />
+        <path d="M62 57 L72 30 L88 52Z" fill={pet.secondaryColor} stroke={outline} strokeWidth="5" strokeLinejoin="round" />
+        <path d="M122 52 L140 32 L143 62Z" fill={pet.primaryColor} stroke={outline} strokeWidth="5" strokeLinejoin="round" />
+        <path d="M66 52 C78 31 103 32 112 58 C96 67 78 66 66 52Z" fill={pet.secondaryColor} />
+        <path d="M112 38 C134 40 146 58 138 77 C124 72 116 59 112 38Z" fill={pet.secondaryColor} opacity="0.94" />
+        <path d="M49 95 C30 96 22 111 35 121 C52 119 59 105 49 95Z" fill={pet.secondaryColor} stroke={outline} strokeWidth="5" strokeLinejoin="round" />
+        <path d="M127 105 C149 105 160 119 145 130 C128 129 119 118 127 105Z" fill={pet.secondaryColor} stroke={outline} strokeWidth="5" strokeLinejoin="round" />
+        <ellipse cx="102" cy={stretch ? 82 : 84} rx="25" ry="20" fill="#fff8ee" opacity="0.9" />
+        {sleeping ? (
+          <>
+            <path d="M82 72 C89 78 96 78 103 72" fill="none" stroke={face} strokeWidth="4" strokeLinecap="round" />
+            <path d="M112 72 C119 78 126 78 133 72" fill="none" stroke={face} strokeWidth="4" strokeLinecap="round" />
+          </>
+        ) : (
+          <>
+            <circle cx="91" cy="70" r="4.5" fill={pet.eyeColor} />
+            <circle cx="120" cy="70" r="4.5" fill={pet.eyeColor} />
+          </>
+        )}
+        <ellipse cx="105" cy="82" rx="5" ry="3.6" fill={face} />
+        <path d="M105 86 C99 92 93 92 87 88" fill="none" stroke={face} strokeWidth="3.5" strokeLinecap="round" />
+        <path d="M106 86 C111 92 118 92 124 88" fill="none" stroke={face} strokeWidth="3.5" strokeLinecap="round" />
+        <path d="M137 100 C161 92 166 66 147 55" fill="none" stroke={pet.secondaryColor} strokeWidth="10" strokeLinecap="round" />
+      </g>
+    </SvgShell>
   );
 }
 
