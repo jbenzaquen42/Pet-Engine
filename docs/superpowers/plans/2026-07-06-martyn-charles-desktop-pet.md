@@ -27,7 +27,7 @@
 
 ## Task Completion Checklist
 
-- [ ] Task 1: Companion Data, Storage Migration, and Test Harness
+- [x] Task 1: Companion Data, Storage Migration, and Test Harness
 - [ ] Task 2: Behavior Engine Extraction
 - [ ] Task 3: App State Wiring and Summon/Hide Flow
 - [ ] Task 4: Authored Martyn and Charles Avatars
