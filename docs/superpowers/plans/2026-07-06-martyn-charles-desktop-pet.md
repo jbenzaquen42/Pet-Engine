@@ -1820,6 +1820,8 @@ Replace the old `<PetRail />`, inline stage actor map, and `<BehaviorBar />` wit
 
 Delete `PetRail`, `BehaviorBar`, `ColorField`, and local `IconButton` implementations from `App.tsx`.
 
+Keep the existing local `IconButton` in `App.tsx` if `TopBar` still renders from `App.tsx`; `TopBar` depends on it for desktop, pin, minimize, and close controls.
+
 - [ ] **Step 7: Rename rail CSS to companion tray and add catalog styles**
 
 In `src/styles.css`, replace `.pet-rail` selectors with `.companion-tray`, keep `.pet-list`, `.pet-card`, `.pet-thumb`, and add:
