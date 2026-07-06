@@ -22,4 +22,12 @@ describe("PetAvatar custom cats", () => {
     expect(markup).toContain("charles-avatar");
     expect(markup).toContain("pose-stretch");
   });
+
+  it("applies the shared walk-body animation class to Martyn and Charles when walking", () => {
+    const martynMarkup = renderToStaticMarkup(<PetAvatar pet={martyn} behavior="walk" />);
+    const charlesMarkup = renderToStaticMarkup(<PetAvatar pet={charles} behavior="walk" />);
+
+    expect(martynMarkup).toContain("pet-walk-body");
+    expect(charlesMarkup).toContain("pet-walk-body");
+  });
 });

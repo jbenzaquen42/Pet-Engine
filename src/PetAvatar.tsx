@@ -58,7 +58,7 @@ function SvgShell({
 function MartynAvatar({ pet, behavior, compact }: Required<PetAvatarProps>) {
   const sleeping = behavior === "sleep";
   const watch = behavior === "watch";
-  const poseClass = `martyn-avatar pose-${behavior}`;
+  const poseClass = `martyn-avatar pose-${behavior}${behavior === "walk" ? " pet-walk-body" : ""}`;
 
   return (
     <SvgShell label={`${pet.name} ${pet.breedLabel}`} compact={compact}>
@@ -100,7 +100,7 @@ function MartynAvatar({ pet, behavior, compact }: Required<PetAvatarProps>) {
 function CharlesAvatar({ pet, behavior, compact }: Required<PetAvatarProps>) {
   const sleeping = behavior === "sleep";
   const stretch = behavior === "stretch";
-  const poseClass = `charles-avatar pose-${behavior}`;
+  const poseClass = `charles-avatar pose-${behavior}${behavior === "walk" ? " pet-walk-body" : ""}`;
 
   return (
     <SvgShell label={`${pet.name} ${pet.breedLabel}`} compact={compact}>
