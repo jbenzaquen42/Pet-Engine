@@ -12,12 +12,14 @@
 
 ## Task Completion Checklist
 
-- [ ] Task 1: Runtime `vx`/`rotation` + grab-toss tumble physics (TDD)
-- [ ] Task 2: Zoomies sprint (TDD)
-- [ ] Task 3: Pet-to-pet interactions — greet, nap-together, chase (TDD)
-- [ ] Task 4: Click + double-click reactions (overlay + poses)
-- [ ] Task 5: Charles fountain prop + drink behavior
-- [ ] Task 6: Cat edge climb + perch (TDD + poses)
+- [x] Task 1: Runtime `vx`/`rotation` + grab-toss tumble physics (TDD)
+- [x] Task 2: Zoomies sprint (TDD)
+- [x] Task 3: Pet-to-pet interactions — greet, nap-together, chase (TDD)
+- [x] Task 4: Click + double-click reactions (overlay + poses)
+- [x] Task 5: Charles fountain prop + drink behavior
+- [x] Task 6: Cat edge climb + perch (TDD + poses)
+
+All engine logic unit-tested (57 tests). Live in-app feel (toss arc, zoomies, climb, fountain drink, reactions) pending user confirmation in the running Electron app after a restart.
 
 ---
 
