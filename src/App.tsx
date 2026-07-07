@@ -1,4 +1,4 @@
-import { ListTodo, Minus, PanelRightClose, PanelRightOpen, Pin, Sparkles, X } from "lucide-react";
+import { Check, Circle, ListTodo, Minus, PanelRightClose, PanelRightOpen, Pin, Plus, Sparkles, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { initialCompanionState, initialSettings, initialTasks } from "./data";
@@ -12,7 +12,9 @@ import {
 import { CommandBar } from "./components/CommandBar";
 import { CompanionEditor } from "./components/CompanionEditor";
 import { CompanionTray } from "./components/CompanionTray";
+import { TimerTool } from "./components/TimerTool";
 import { ToolDrawer, type ToolTab } from "./components/ToolDrawer";
+import { ToolPopout } from "./components/ToolPopout";
 import { uid, useLocalStorageState } from "./storage";
 import type { EngineSettings, PetProfile, TaskItem } from "./types";
 import type { OverlaySnapshot } from "./shared/overlayBridge";
@@ -67,8 +69,10 @@ function App() {
   const [selectedPetIds, setSelectedPetIds] = useState<string[]>(() => [summonedCompanions[0]?.id ?? "martyn"]);
   const [toolTab, setToolTab] = useState<ToolTab>("notes");
   const [newTask, setNewTask] = useState("");
+  const [timerMinutes, setTimerMinutes] = useState(25);
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [poppedTools, setPoppedTools] = useState<ToolTab[]>([]);
   const [firstRunSeen, setFirstRunSeen] = useLocalStorageState<boolean>(STORAGE_KEYS.firstRun, false);
   const showFirstRun = !firstRunSeen;
 
@@ -224,6 +228,41 @@ function App() {
     [setTasks]
   );
 
+  const popTool = useCallback((tab: ToolTab) => {
+    setPoppedTools((current) => (current.includes(tab) ? current : [...current, tab]));
+  }, []);
+
+  const closePoppedTool = useCallback((tab: ToolTab) => {
+    setPoppedTools((current) => current.filter((item) => item !== tab));
+  }, []);
+
+  const updateTimerMinutes = useCallback((minutes: number) => {
+    const bounded = Math.min(180, Math.max(1, minutes));
+    setTimerMinutes(bounded);
+    setTimerRunning(false);
+    setTimerSeconds(bounded * 60);
+  }, []);
+
+  const toggleTaskDone = useCallback(
+    (taskId: string) => {
+      setTasks((current) => current.map((item) => (item.id === taskId ? { ...item, done: !item.done } : item)));
+    },
+    [setTasks]
+  );
+
+  const timerActionProps = {
+    timerSeconds,
+    timerRunning,
+    timerProgress,
+    timerMinutes,
+    onTimerToggle: () => setTimerRunning((current) => !current),
+    onTimerReset: () => {
+      setTimerRunning(false);
+      setTimerSeconds(timerMinutes * 60);
+    },
+    onTimerMinutesChange: updateTimerMinutes
+  };
+
   return (
     <main className="app-shell">
       <TopBar
@@ -302,19 +341,81 @@ function App() {
               timerSeconds={timerSeconds}
               timerRunning={timerRunning}
               timerProgress={timerProgress}
-              onTimerToggle={() => setTimerRunning((current) => !current)}
-              onTimerReset={() => {
-                setTimerRunning(false);
-                setTimerSeconds(25 * 60);
-              }}
+              poppedTools={poppedTools}
+              onPopTool={popTool}
+              timerMinutes={timerMinutes}
+              onTimerToggle={timerActionProps.onTimerToggle}
+              onTimerReset={timerActionProps.onTimerReset}
+              onTimerMinutesChange={updateTimerMinutes}
               stats={stats}
             />
           )}
         </div>
 
+        {poppedTools.map((tab, index) => (
+          <ToolPopout
+            key={tab}
+            title={getToolTitle(tab)}
+            onClose={() => closePoppedTool(tab)}
+            style={{ right: 18 + index * 20, bottom: 18 + index * 20 }}
+          >
+            {tab === "notes" && <textarea value={notes} onChange={(event) => setNotes(event.target.value)} spellCheck />}
+
+            {tab === "tasks" && (
+              <section className="tool-pane">
+                <form
+                  className="task-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    addTask();
+                  }}
+                >
+                  <input value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="New task" />
+                  <button type="submit" aria-label="Add task">
+                    <Plus size={17} />
+                  </button>
+                </form>
+                <div className="task-list">
+                  {tasks.map((task) => (
+                    <div className={`task-row ${task.done ? "done" : ""}`} key={task.id}>
+                      <button
+                        type="button"
+                        className="check-button"
+                        onClick={() => toggleTaskDone(task.id)}
+                        aria-label={task.done ? "Mark incomplete" : "Mark complete"}
+                      >
+                        {task.done ? <Check size={15} /> : <Circle size={15} />}
+                      </button>
+                      <span>{task.text}</span>
+                      <button type="button" className="trash-button" onClick={() => removeTask(task.id)} aria-label="Remove task">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {tab === "timer" && <TimerTool {...timerActionProps} />}
+          </ToolPopout>
+        ))}
+
       </section>
     </main>
   );
+}
+
+function getToolTitle(tab: ToolTab) {
+  switch (tab) {
+    case "notes":
+      return "Notes";
+    case "tasks":
+      return "Tasks";
+    case "timer":
+      return "Timer";
+    default:
+      return "Tool";
+  }
 }
 
 interface TopBarProps {

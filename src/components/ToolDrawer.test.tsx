@@ -24,8 +24,12 @@ function renderDrawer(activeTab: ToolTab) {
       timerSeconds={25 * 60}
       timerRunning={false}
       timerProgress={0}
+      poppedTools={[]}
+      onPopTool={() => undefined}
+      timerMinutes={25}
       onTimerToggle={() => undefined}
       onTimerReset={() => undefined}
+      onTimerMinutesChange={() => undefined}
       stats={{ keys: 1234, activeSeconds: 3665, launches: 3 }}
     />
   );
@@ -65,5 +69,13 @@ describe("ToolDrawer", () => {
     expect(statsMarkup).toContain("1h 1m");
     expect(statsMarkup).toContain("1/2");
     expect(statsMarkup).toContain("3");
+  });
+
+  it("renders pop-out controls for notes tasks and timer", () => {
+    const markup = renderDrawer("timer");
+
+    expect(markup).toContain("Pop out Notes");
+    expect(markup).toContain("Pop out Tasks");
+    expect(markup).toContain("Pop out Timer");
   });
 });

@@ -3,17 +3,16 @@ import {
   Check,
   Circle,
   Clock3,
+  ExternalLink,
   Keyboard,
   ListTodo,
   NotebookPen,
-  Pause,
-  Play,
   Plus,
-  TimerReset,
   Trash2
 } from "lucide-react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { TaskItem } from "../types";
+import { TimerTool } from "./TimerTool";
 
 export type ToolTab = "notes" | "tasks" | "timer" | "stats";
 
@@ -31,8 +30,12 @@ interface ToolDrawerProps {
   timerSeconds: number;
   timerRunning: boolean;
   timerProgress: number;
+  poppedTools: ToolTab[];
+  onPopTool: (tab: ToolTab) => void;
+  timerMinutes: number;
   onTimerToggle: () => void;
   onTimerReset: () => void;
+  onTimerMinutesChange: (minutes: number) => void;
   stats: {
     keys: number;
     activeSeconds: number;
@@ -54,8 +57,12 @@ export function ToolDrawer({
   timerSeconds,
   timerRunning,
   timerProgress,
+  poppedTools,
+  onPopTool,
+  timerMinutes,
   onTimerToggle,
   onTimerReset,
+  onTimerMinutesChange,
   stats
 }: ToolDrawerProps) {
   return (
@@ -67,15 +74,24 @@ export function ToolDrawer({
         </div>
       </div>
       <div className="tab-row" role="tablist" aria-label="Tool tabs">
-        <TabButton active={activeTab === "notes"} label="Notes" onClick={() => setActiveTab("notes")}>
-          <NotebookPen size={17} />
-        </TabButton>
-        <TabButton active={activeTab === "tasks"} label="Tasks" onClick={() => setActiveTab("tasks")}>
-          <ListTodo size={17} />
-        </TabButton>
-        <TabButton active={activeTab === "timer"} label="Timer" onClick={() => setActiveTab("timer")}>
-          <AlarmClock size={17} />
-        </TabButton>
+        <TabEntry>
+          <TabButton active={activeTab === "notes"} label="Notes" onClick={() => setActiveTab("notes")}>
+            <NotebookPen size={17} />
+          </TabButton>
+          <PopToolButton label="Notes" onClick={() => onPopTool("notes")} disabled={poppedTools.includes("notes")} />
+        </TabEntry>
+        <TabEntry>
+          <TabButton active={activeTab === "tasks"} label="Tasks" onClick={() => setActiveTab("tasks")}>
+            <ListTodo size={17} />
+          </TabButton>
+          <PopToolButton label="Tasks" onClick={() => onPopTool("tasks")} disabled={poppedTools.includes("tasks")} />
+        </TabEntry>
+        <TabEntry>
+          <TabButton active={activeTab === "timer"} label="Timer" onClick={() => setActiveTab("timer")}>
+            <AlarmClock size={17} />
+          </TabButton>
+          <PopToolButton label="Timer" onClick={() => onPopTool("timer")} disabled={poppedTools.includes("timer")} />
+        </TabEntry>
         <TabButton active={activeTab === "stats"} label="Stats" onClick={() => setActiveTab("stats")}>
           <Keyboard size={17} />
         </TabButton>
@@ -128,21 +144,15 @@ export function ToolDrawer({
         )}
 
         {activeTab === "timer" && (
-          <section className="tool-pane timer-pane">
-            <div className="timer-ring" style={{ ["--timer-progress" as string]: timerProgress }}>
-              <span>{formatTimer(timerSeconds)}</span>
-            </div>
-            <div className="timer-actions">
-              <button type="button" onClick={onTimerToggle}>
-                {timerRunning ? <Pause size={17} /> : <Play size={17} />}
-                {timerRunning ? "Pause" : "Start"}
-              </button>
-              <button type="button" onClick={onTimerReset}>
-                <TimerReset size={17} />
-                Reset
-              </button>
-            </div>
-          </section>
+          <TimerTool
+            timerSeconds={timerSeconds}
+            timerRunning={timerRunning}
+            timerProgress={timerProgress}
+            timerMinutes={timerMinutes}
+            onTimerToggle={onTimerToggle}
+            onTimerReset={onTimerReset}
+            onTimerMinutesChange={onTimerMinutesChange}
+          />
         )}
 
         {activeTab === "stats" && (
@@ -156,6 +166,10 @@ export function ToolDrawer({
       </div>
     </aside>
   );
+}
+
+function TabEntry({ children }: { children: ReactNode }) {
+  return <div className="tab-entry">{children}</div>;
 }
 
 interface TabButtonProps {
@@ -184,12 +198,6 @@ function Metric({ icon, label, value }: { icon: ReactNode; label: string; value:
   );
 }
 
-function formatTimer(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remaining = seconds % 60;
-  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
-}
-
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;
@@ -198,4 +206,25 @@ function formatDuration(seconds: number) {
   }
   const hours = Math.floor(minutes / 60);
   return `${hours}h ${minutes % 60}m`;
+}
+
+interface PopToolButtonProps {
+  label: string;
+  onClick: () => void;
+  disabled: boolean;
+}
+
+function PopToolButton({ label, onClick, disabled }: PopToolButtonProps) {
+  return (
+    <button
+      type="button"
+      className="pop-tool-button"
+      onClick={onClick}
+      aria-label={`Pop out ${label}`}
+      title={`Pop out ${label}`}
+      disabled={disabled}
+    >
+      <ExternalLink size={16} />
+    </button>
+  );
 }
