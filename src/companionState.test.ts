@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { customCompanions, initialCompanionState } from "./data";
 import {
+  COMPANION_SCHEMA_VERSION,
   findSelectedCompanion,
   getSharedNumberValue,
   getSummonedCompanions,
@@ -65,5 +66,26 @@ describe("companion state", () => {
   it("still finds selected summoned companions", () => {
     const summoned = getSummonedCompanions(initialCompanionState.companions);
     expect(findSelectedCompanion(initialCompanionState.companions, summoned[0].id)?.id).toBe(summoned[0].id);
+  });
+
+  it("returns defaults for legacy or junk normalization input", () => {
+    const oldPets = [
+      { id: "patch", name: "Edited Patch", species: "cat", pattern: "patch-cat" },
+      { id: "charles", name: "Wrong Name", species: "cat", pattern: "tabby" }
+    ];
+
+    const migrated = normalizeCompanionState(oldPets);
+    const junk = normalizeCompanionState("nope");
+
+    expect(migrated.schemaVersion).toBe(COMPANION_SCHEMA_VERSION);
+    expect(migrated.companions).toEqual(initialCompanionState.companions);
+    expect(junk).toEqual(initialCompanionState);
+  });
+
+  it("falls back to a restorable built-in companion when every companion is hidden", () => {
+    const companions = initialCompanionState.companions.map((pet) => ({ ...pet, summoned: false }));
+
+    expect(getSummonedCompanions(companions)).toHaveLength(0);
+    expect(findSelectedCompanion(companions, "missing")?.id).toBe("martyn");
   });
 });

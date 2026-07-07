@@ -61,3 +61,40 @@ Result:
 - Followed the brief literally, including helper signatures and the focused test command.
 - Left unrelated untracked brief files untouched.
 - The focused tests pass; the only remaining noise is existing Vite deprecation warnings during the test run, which did not affect task behavior.
+
+## Fixes After Review
+
+### Review Findings Addressed
+
+- Updated `findSelectedCompanion(...)` so the final fallback is now a restorable built-in companion: first custom companion, then the first companion in the list if needed.
+- Restored coverage for legacy/junk normalization input.
+- Restored and strengthened the no-summoned fallback-path coverage so hiding every companion still leaves a selectable built-in companion.
+- Removed the explicit `locked: false` override in `mergeStoredCompanion(...)` and now rely on authored defaults from the base clone, which still normalize built-ins as unlocked.
+
+### Fix TDD Evidence
+
+#### RED
+
+Command:
+
+```bash
+npx vitest run src/companionState.test.ts
+```
+
+Result:
+
+- Failed 1 of 8 tests.
+- Failure matched the review finding: when every companion was hidden, `findSelectedCompanion(...)` returned `undefined` instead of a restorable built-in companion.
+
+#### GREEN
+
+Command:
+
+```bash
+npx vitest run src/companionState.test.ts
+```
+
+Result:
+
+- Passed 8 of 8 tests.
+- Focused task suite completed successfully after the fallback fix.

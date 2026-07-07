@@ -43,7 +43,6 @@ function mergeStoredCompanion(defaultPet: PetProfile, stored: PetProfile | undef
     id: defaultPet.id,
     species: defaultPet.species,
     kind: defaultPet.kind,
-    locked: false,
     avatar: defaultPet.avatar,
     pattern: defaultPet.pattern
   };
@@ -93,7 +92,8 @@ export function findSelectedCompanion(companions: PetProfile[], selectedId: stri
   return (
     companions.find((pet) => pet.id === selectedId && pet.summoned) ??
     summoned[0] ??
-    companions.find((pet) => pet.locked)
+    companions.find((pet) => pet.kind === "custom") ??
+    companions[0]
   );
 }
 
