@@ -1,4 +1,4 @@
-import { Activity, Home, ListTodo, Minus, PanelRightClose, PanelRightOpen, Pin, Sparkles, X } from "lucide-react";
+import { ListTodo, Minus, PanelRightClose, PanelRightOpen, Pin, Sparkles, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { initialCompanionState, initialSettings, initialTasks } from "./data";
@@ -20,7 +20,8 @@ const STORAGE_KEYS = {
   settings: "personal-pet-engine:settings",
   notes: "personal-pet-engine:notes",
   tasks: "personal-pet-engine:tasks",
-  stats: "personal-pet-engine:stats"
+  stats: "personal-pet-engine:stats",
+  firstRun: "personal-pet-engine:first-run-seen"
 };
 
 
@@ -65,6 +66,8 @@ function App() {
   const [newTask, setNewTask] = useState("");
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [firstRunSeen, setFirstRunSeen] = useLocalStorageState<boolean>(STORAGE_KEYS.firstRun, false);
+  const showFirstRun = !firstRunSeen;
 
   const selectedPet = findSelectedCompanion(companions, selectedPetId);
 
@@ -203,13 +206,22 @@ function App() {
   );
 
   return (
-    <main className={`app-shell ${settings.desktopMode ? "desktop-mode" : ""}`}>
+    <main className="app-shell">
       <TopBar
         alwaysOnTop={settings.alwaysOnTop}
-        desktopMode={settings.desktopMode}
+        summonedCount={summonedCompanions.length}
         onTogglePin={() => updateSettings({ alwaysOnTop: !settings.alwaysOnTop })}
-        onToggleDesktop={() => updateSettings({ desktopMode: !settings.desktopMode })}
       />
+
+      {showFirstRun && (
+        <div className="first-run" role="status">
+          <Sparkles size={16} />
+          <p>Your companions live on the desktop now. Press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> anytime to bring this panel back.</p>
+          <button type="button" aria-label="Dismiss" onClick={() => setFirstRunSeen(true)}>
+            <X size={15} />
+          </button>
+        </div>
+      )}
 
       <section className="workspace">
         <CompanionTray
@@ -219,72 +231,60 @@ function App() {
           onToggleSummoned={toggleSummoned}
         />
 
-        <section className="stage-wrap">
-          <div className="stage-header">
-            <div>
-              <h1>Pet Engine</h1>
-              <p>{summonedCompanions.length} companions running on your desktop</p>
-            </div>
-            <div className="stage-status">
-              <span>
-                <Activity size={15} />
-                {settings.physics ? "Physics" : "Calm"}
-              </span>
-              <span>
-                <ListTodo size={15} />
-                {completedTasks}/{tasks.length || 1}
-              </span>
-            </div>
-          </div>
+        <CommandBar
+          selectedPet={selectedPet}
+          settings={settings}
+          onSettingsChange={updateSettings}
+          onCommand={(behavior, target = "selected") =>
+            window.petEngine?.pushCommand({
+              behavior,
+              target,
+              id: target === "selected" ? selectedPetId : undefined
+            })
+          }
+          onCall={() => window.petEngine?.pushCommand({ behavior: "walk", target: "selected", id: selectedPetId })}
+          onReset={() => window.petEngine?.pushCommand({ behavior: "idle", target: "all" })}
+        />
 
-          <CommandBar
-            selectedPet={selectedPet}
-            settings={settings}
-            onSettingsChange={updateSettings}
-            onCommand={(behavior, target = "selected") =>
-              window.petEngine?.pushCommand({
-                behavior,
-                target,
-                id: target === "selected" ? selectedPetId : undefined
-              })
-            }
-            onCall={() => window.petEngine?.pushCommand({ behavior: "walk", target: "selected", id: selectedPetId })}
-            onReset={() => window.petEngine?.pushCommand({ behavior: "idle", target: "all" })}
-          />
-        </section>
+        <div className="tools-region">
+          <button
+            className="tools-toggle"
+            type="button"
+            onClick={() => updateSettings({ panelOpen: !settings.panelOpen })}
+            aria-label={settings.panelOpen ? "Hide tools" : "Show tools"}
+          >
+            {settings.panelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+            <span>{settings.panelOpen ? "Hide tools" : "Show tools"}</span>
+            <small>
+              <ListTodo size={13} /> {completedTasks}/{tasks.length || 1}
+            </small>
+          </button>
 
-        {settings.panelOpen && (
-          <ToolDrawer
-            activeTab={toolTab}
-            setActiveTab={setToolTab}
-            notes={notes}
-            onNotesChange={setNotes}
-            tasks={tasks}
-            newTask={newTask}
-            setNewTask={setNewTask}
-            addTask={addTask}
-            removeTask={removeTask}
-            setTasks={setTasks}
-            timerSeconds={timerSeconds}
-            timerRunning={timerRunning}
-            timerProgress={timerProgress}
-            onTimerToggle={() => setTimerRunning((current) => !current)}
-            onTimerReset={() => {
-              setTimerRunning(false);
-              setTimerSeconds(25 * 60);
-            }}
-            stats={stats}
-          />
-        )}
+          {settings.panelOpen && (
+            <ToolDrawer
+              activeTab={toolTab}
+              setActiveTab={setToolTab}
+              notes={notes}
+              onNotesChange={setNotes}
+              tasks={tasks}
+              newTask={newTask}
+              setNewTask={setNewTask}
+              addTask={addTask}
+              removeTask={removeTask}
+              setTasks={setTasks}
+              timerSeconds={timerSeconds}
+              timerRunning={timerRunning}
+              timerProgress={timerProgress}
+              onTimerToggle={() => setTimerRunning((current) => !current)}
+              onTimerReset={() => {
+                setTimerRunning(false);
+                setTimerSeconds(25 * 60);
+              }}
+              stats={stats}
+            />
+          )}
+        </div>
 
-        <button
-          className="panel-toggle"
-          type="button"
-          onClick={() => updateSettings({ panelOpen: !settings.panelOpen })}
-          aria-label={settings.panelOpen ? "Hide tools" : "Show tools"}
-        >
-          {settings.panelOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-        </button>
       </section>
     </main>
   );
@@ -292,12 +292,11 @@ function App() {
 
 interface TopBarProps {
   alwaysOnTop: boolean;
-  desktopMode: boolean;
+  summonedCount: number;
   onTogglePin: () => void;
-  onToggleDesktop: () => void;
 }
 
-function TopBar({ alwaysOnTop, desktopMode, onTogglePin, onToggleDesktop }: TopBarProps) {
+function TopBar({ alwaysOnTop, summonedCount, onTogglePin }: TopBarProps) {
   return (
     <header className="top-bar">
       <div className="brand">
@@ -305,11 +304,9 @@ function TopBar({ alwaysOnTop, desktopMode, onTogglePin, onToggleDesktop }: TopB
           <Sparkles size={18} />
         </span>
         <span>Pet Engine</span>
+        <small className="brand-count">{summonedCount} on desktop</small>
       </div>
       <div className="top-actions">
-        <IconButton active={desktopMode} label="Desktop mode" onClick={onToggleDesktop}>
-          <Home size={17} />
-        </IconButton>
         <IconButton active={alwaysOnTop} label="Always on top" onClick={onTogglePin}>
           <Pin size={17} />
         </IconButton>
