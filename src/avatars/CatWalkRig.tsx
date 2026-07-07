@@ -1,4 +1,4 @@
-import type { PetProfile } from "../types";
+import type { Behavior, PetProfile } from "../types";
 
 const outline = "#704c35";
 const nosePink = "#e8949c";
@@ -9,6 +9,13 @@ const face = "#563927";
 interface CatWalkRigProps {
   pet: PetProfile;
   markings: "martyn" | "charles";
+  behavior?: Behavior;
+}
+
+// Locomotion behaviors get their own rig pose class; anything else walks.
+const RIG_POSES: Behavior[] = ["walk", "chase", "stalk", "pounce"];
+function poseClassFor(behavior: Behavior | undefined) {
+  return behavior && RIG_POSES.includes(behavior) ? `pose-${behavior}` : "pose-walk";
 }
 
 function Leg({ className, x, coat }: { className: string; x: number; coat: string }) {
@@ -26,7 +33,7 @@ function Leg({ className, x, coat }: { className: string; x: number; coat: strin
  * body, near legs, head. Markings switch Martyn (gray crown + gray tabby tail)
  * vs Charles (orange saddle/cap + orange striped tail).
  */
-export function CatWalkRig({ pet, markings }: CatWalkRigProps) {
+export function CatWalkRig({ pet, markings, behavior }: CatWalkRigProps) {
   const coat = pet.primaryColor;
   const mark = pet.secondaryColor;
   const stripe = pet.accentColor;
@@ -38,7 +45,7 @@ export function CatWalkRig({ pet, markings }: CatWalkRigProps) {
     <svg className="pet-svg sticker-pet" viewBox="0 0 200 150" role="img" aria-label={`${pet.name} ${pet.breedLabel}`}>
       <ellipse className="soft-shadow" cx="100" cy="140" rx="66" ry="8" />
 
-      <g className="rig-cat pose-walk">
+      <g className={`rig-cat ${poseClassFor(behavior)}`}>
         {/* tail, behind the body, sweeps up off the rump on the left */}
         <g className="rig-tail">
           <path

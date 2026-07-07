@@ -13,7 +13,7 @@ const face = "#563927";
 
 // Behaviors that move the cat across the desktop use the side-profile walk rig;
 // everything else keeps the approved front-facing sticker.
-const LOCOMOTION: Behavior[] = ["walk"];
+const LOCOMOTION: Behavior[] = ["walk", "chase", "stalk", "pounce"];
 function isLocomotion(behavior: Behavior) {
   return LOCOMOTION.includes(behavior);
 }
@@ -24,13 +24,13 @@ export function PetAvatar({ pet, behavior = "idle", compact = false }: PetAvatar
   switch (pet.avatar) {
     case "martyn":
       return isLocomotion(behavior) && !compact ? (
-        <CatWalkRig pet={pet} markings="martyn" />
+        <CatWalkRig pet={pet} markings="martyn" behavior={behavior} />
       ) : (
         <MartynAvatar {...props} />
       );
     case "charles":
       return isLocomotion(behavior) && !compact ? (
-        <CatWalkRig pet={pet} markings="charles" />
+        <CatWalkRig pet={pet} markings="charles" behavior={behavior} />
       ) : (
         <CharlesAvatar {...props} />
       );

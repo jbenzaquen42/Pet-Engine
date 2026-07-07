@@ -583,10 +583,64 @@ textarea:focus {
     transform: translateY(-2px);
   }
 }
+/* Chase: same gait, faster cadence. */
+.pose-chase .leg {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+.pose-chase .leg-back-far,
+.pose-chase .leg-front-near {
+  animation: cat-step 0.3s ease-in-out infinite;
+}
+.pose-chase .leg-front-far,
+.pose-chase .leg-back-near {
+  animation: cat-step 0.3s ease-in-out infinite;
+  animation-delay: -0.15s;
+}
+.pose-chase .rig-tail {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: cat-tail 0.55s ease-in-out infinite;
+}
+
+/* Stalk: low crouch, legs still, tail flicks slowly. */
+.pose-stalk {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transform: translateY(5px) scaleY(0.9);
+}
+.pose-stalk .rig-tail {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: cat-tail 0.9s ease-in-out infinite;
+}
+
+/* Pounce: stretched-out leap. */
+.pose-pounce {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: cat-pounce 0.38s ease-out;
+}
+@keyframes cat-pounce {
+  0% {
+    transform: scaleX(0.94) scaleY(1.04);
+  }
+  40% {
+    transform: scaleX(1.16) scaleY(0.9);
+  }
+  100% {
+    transform: scaleX(1) scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pose-walk .leg,
   .pose-walk .rig-tail,
-  .pose-walk .rig-body {
+  .pose-walk .rig-body,
+  .pose-chase .leg,
+  .pose-chase .rig-tail,
+  .pose-stalk .rig-tail,
+  .pose-pounce {
     animation: none;
   }
 }
