@@ -1,8 +1,8 @@
 node_modules/
 dist/
+release/
 .vite/
 references/
-.worktrees/
-.superpowers/
 npm-debug.log*
 *.local
+.pet-engine-vite.*.log

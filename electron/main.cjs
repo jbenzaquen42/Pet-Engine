@@ -10,6 +10,11 @@ let latestSnapshot = { companions: [], settings: {} };
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 
+// Icon lives in build/ during dev and in resources/ once packaged.
+const iconPath = isDev
+  ? path.join(__dirname, "..", "build", "icon.png")
+  : path.join(process.resourcesPath, "icon.png");
+
 function boundsFilePath() {
   return path.join(app.getPath("userData"), "panel-bounds.json");
 }
@@ -47,6 +52,7 @@ function createOverlayWindow() {
     y,
     width,
     height,
+    icon: iconPath,
     transparent: true,
     backgroundColor: "#00000000",
     frame: false,
@@ -75,6 +81,7 @@ function createPanelWindow() {
     height: saved?.height ?? 620,
     x: saved?.x,
     y: saved?.y,
+    icon: iconPath,
     minWidth: 380,
     minHeight: 520,
     transparent: true,
@@ -117,7 +124,11 @@ function showPanel() {
 }
 
 function createTray() {
-  tray = new Tray(nativeImage.createEmpty());
+  let trayImage = nativeImage.createFromPath(iconPath);
+  if (!trayImage.isEmpty()) {
+    trayImage = trayImage.resize({ width: 18, height: 18 });
+  }
+  tray = new Tray(trayImage.isEmpty() ? nativeImage.createEmpty() : trayImage);
   tray.setToolTip("Pet Engine");
   const menu = Menu.buildFromTemplate([
     { label: "Show panel", click: showPanel },
@@ -251,4 +262,9 @@ ipcMain.handle("panel:close", () => {
 ipcMain.handle("panel:alwaysOnTop", (_event, enabled) => {
   panelWindow?.setAlwaysOnTop(Boolean(enabled), enabled ? "floating" : "normal");
   return panelWindow?.isAlwaysOnTop() ?? false;
+});
+
+ipcMain.handle("app:launchAtLogin", (_event, enabled) => {
+  app.setLoginItemSettings({ openAtLogin: Boolean(enabled) });
+  return app.getLoginItemSettings().openAtLogin;
 });

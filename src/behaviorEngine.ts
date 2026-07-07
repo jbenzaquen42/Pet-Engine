@@ -476,6 +476,7 @@ function defaultScaleSettings(): EngineSettings {
     clickThrough: false,
     followMode: false,
     pounce: false,
+    launchAtLogin: false,
     fountain: { enabled: false, x: 0.7 },
     globalScale: 1,
     globalSpeed: 1

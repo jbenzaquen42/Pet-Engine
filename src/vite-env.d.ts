@@ -15,6 +15,7 @@ declare global {
       minimizeToTray: () => Promise<void>;
       close: () => Promise<void>;
       setAlwaysOnTop: (enabled: boolean) => Promise<boolean>;
+      setLaunchAtLogin: (enabled: boolean) => Promise<boolean>;
       pushSnapshot: (snapshot: OverlaySnapshot) => void;
       requestSnapshot: () => void;
       onSnapshot: (callback: (snapshot: unknown) => void) => () => void;

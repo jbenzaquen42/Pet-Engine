@@ -241,6 +241,7 @@ export const initialSettings: EngineSettings = {
   clickThrough: false,
   followMode: false,
   pounce: true,
+  launchAtLogin: false,
   fountain: { enabled: true, x: 0.7 },
   globalScale: 1,
   globalSpeed: 1

@@ -101,6 +101,11 @@ function App() {
     window.petEngine?.setFollow(settings.followMode);
   }, [settings.followMode]);
 
+  // Register/unregister the OS launch-at-login item.
+  useEffect(() => {
+    window.petEngine?.setLaunchAtLogin(settings.launchAtLogin).catch(() => undefined);
+  }, [settings.launchAtLogin]);
+
   // Mirror the tray "Follow mode" checkbox into settings.
   useEffect(() => {
     if (!window.petEngine?.onTrayToggleFollow) {

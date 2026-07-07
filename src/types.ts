@@ -104,6 +104,7 @@ export interface EngineSettings {
   clickThrough: boolean;
   followMode: boolean;
   pounce: boolean;
+  launchAtLogin: boolean;
   fountain: FountainSettings;
   globalScale: number;
   globalSpeed: number;

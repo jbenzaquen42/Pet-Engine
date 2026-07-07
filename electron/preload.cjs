@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("petEngine", {
   minimizeToTray: () => ipcRenderer.invoke("panel:minimizeToTray"),
   close: () => ipcRenderer.invoke("panel:close"),
   setAlwaysOnTop: (enabled) => ipcRenderer.invoke("panel:alwaysOnTop", enabled),
+  setLaunchAtLogin: (enabled) => ipcRenderer.invoke("app:launchAtLogin", enabled),
 
   // Snapshot sync
   pushSnapshot: (snapshot) => ipcRenderer.send("snapshot:push", snapshot),

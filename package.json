@@ -10,7 +10,38 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "preview": "vite preview --host 127.0.0.1",
-    "start": "electron ."
+    "start": "electron .",
+    "make-icon": "node scripts/make-icon.mjs",
+    "dist": "npm run make-icon && npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.petengine.desktop",
+    "productName": "Pet Engine",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Pet Engine"
+    }
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -24,6 +55,7 @@
     "concurrently": "^9.0.1",
     "cross-env": "^7.0.3",
     "electron": "^32.1.0",
+    "electron-builder": "^26.15.3",
     "jsdom": "^29.1.1",
     "typescript": "^5.6.2",
     "vite": "^5.4.8",
