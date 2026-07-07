@@ -166,6 +166,27 @@ export function advanceCompanion(
     return { ...next, y: ground };
   }
 
+  // Drink: walk to the fountain target, then lap for a few seconds.
+  if (next.behavior === "drink") {
+    const target = next.targetX ?? next.x;
+    const dx = target - next.x;
+    if (Math.abs(dx) > 6) {
+      const step = (0.5 + pet.speed * 0.8) * settings.globalSpeed * (delta / 16.67);
+      const direction: 1 | -1 = dx > 0 ? 1 : -1;
+      return {
+        ...next,
+        x: clamp(next.x + Math.min(Math.abs(dx), step) * direction, 8, maxX),
+        y: ground,
+        direction,
+        behavior: "drink"
+      };
+    }
+    if (elapsed > 3600) {
+      return { ...next, y: ground, behavior: "idle", targetX: undefined, stateStartedAt: now };
+    }
+    return { ...next, y: ground };
+  }
+
   // Zoomies: a fast sprint to a target edge, then a skidding sit.
   if (next.behavior === "zoomies") {
     const target = next.targetX ?? (next.direction === 1 ? maxX : 8);
@@ -287,6 +308,40 @@ export function applyNeighbors(
     });
   }
   return runtimes.map((runtime) => (updates.has(runtime.id) ? { ...runtime, ...updates.get(runtime.id) } : runtime));
+}
+
+/** Absolute x of the fountain from its stored width fraction. */
+export function getFountainX(settings: EngineSettings, width: number) {
+  return clamp(settings.fountain.x * width, 40, Math.max(40, width - 40));
+}
+
+/**
+ * Sends Charles to the fountain to drink now and then. Pure pre-pass; Martyn
+ * and catalog pets ignore the fountain. No-op when the fountain is disabled.
+ */
+export function applyFountain(
+  runtimes: PetRuntime[],
+  pets: PetProfile[],
+  settings: EngineSettings,
+  bounds: StageBounds,
+  now: number,
+  random: () => number = Math.random
+): PetRuntime[] {
+  if (!settings.fountain.enabled) {
+    return runtimes;
+  }
+  const fountainX = getFountainX(settings, bounds.width);
+  const petById = new Map(pets.map((pet) => [pet.id, pet]));
+  return runtimes.map((runtime) => {
+    const pet = petById.get(runtime.id);
+    if (!pet || pet.avatar !== "charles" || runtime.behavior !== "idle") {
+      return runtime;
+    }
+    if (now - runtime.lastInteractionAt < 8000 || random() > 0.004) {
+      return runtime;
+    }
+    return { ...runtime, behavior: "drink", targetX: fountainX, stateStartedAt: now, lastInteractionAt: now };
+  });
 }
 
 export function getPetSize(pet: PetProfile, settings: EngineSettings) {

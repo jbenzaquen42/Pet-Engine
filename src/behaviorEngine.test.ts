@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { customCompanions, initialSettings } from "./data";
 import {
   advanceCompanion,
+  applyFountain,
   applyNeighbors,
   commandRuntime,
   createInitialRuntime,
@@ -300,6 +301,30 @@ describe("click reaction", () => {
       () => 0.5
     );
     expect(done.behavior).toBe("idle");
+  });
+});
+
+describe("charles fountain", () => {
+  const enabled = { ...initialSettings, fountain: { enabled: true, x: 0.7 } };
+
+  it("sends Charles to drink when the roll lands and the fountain is on", () => {
+    const runtimes = [runtimeFor("charles", { behavior: "idle", lastInteractionAt: 0 })];
+    const result = applyFountain(runtimes, [charles], enabled, bounds, 10000, () => 0);
+    expect(result[0].behavior).toBe("drink");
+    expect(result[0].targetX).toBeGreaterThan(0);
+  });
+
+  it("never sends Martyn to the fountain", () => {
+    const runtimes = [runtimeFor("martyn", { behavior: "idle", lastInteractionAt: 0 })];
+    const result = applyFountain(runtimes, [martyn], enabled, bounds, 10000, () => 0);
+    expect(result[0].behavior).toBe("idle");
+  });
+
+  it("is a no-op when the fountain is disabled", () => {
+    const runtimes = [runtimeFor("charles", { behavior: "idle", lastInteractionAt: 0 })];
+    const disabled = { ...initialSettings, fountain: { enabled: false, x: 0.7 } };
+    const result = applyFountain(runtimes, [charles], disabled, bounds, 10000, () => 0);
+    expect(result).toBe(runtimes);
   });
 });
 

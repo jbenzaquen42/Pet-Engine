@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   advanceCompanion,
+  applyFountain,
   applyNeighbors,
   clamp,
   commandRuntime,
@@ -54,8 +55,9 @@ export function useCompanionSimulation({
       const bounds = getBounds();
       const follow = getFollow ? getFollow() : IDLE_FOLLOW;
       setRuntime((current) => {
-        // Ambient pet-to-pet interactions run first (skipped while following).
-        const seeded = follow.active ? current : applyNeighbors(current, companions, bounds, now);
+        // Ambient interactions run first (skipped while following the cursor).
+        const withNeighbors = follow.active ? current : applyNeighbors(current, companions, bounds, now);
+        const seeded = follow.active ? withNeighbors : applyFountain(withNeighbors, companions, settings, bounds, now);
         return seeded.map((petRuntime) => {
           if (dragRef.current?.id === petRuntime.id) {
             return petRuntime;

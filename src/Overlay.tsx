@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 import { PetAvatar } from "./PetAvatar";
-import { getPetSize } from "./behaviorEngine";
+import { Fountain } from "./avatars/Fountain";
+import { getFountainX, getPetSize } from "./behaviorEngine";
 import { normalizeSnapshot, type OverlaySnapshot } from "./shared/overlayBridge";
 import { findPetAtPoint, type PetBox } from "./overlay/hitTest";
 import { useCompanionSimulation, type SimulationBounds } from "./overlay/useCompanionSimulation";
@@ -170,8 +171,20 @@ export function Overlay() {
     }
   }, [endDrag]);
 
+  const fountainSize = 120;
+  const fountainLeft = getFountainX(snapshot.settings, window.innerWidth) - fountainSize / 2;
+
   return (
     <div className="overlay-stage">
+      {snapshot.settings.fountain.enabled && (
+        <div
+          className="overlay-fountain"
+          style={{ transform: `translate3d(${fountainLeft}px, ${window.innerHeight - 150}px, 0)`, width: fountainSize }}
+          aria-hidden="true"
+        >
+          <Fountain />
+        </div>
+      )}
       {snapshot.companions.map((pet) => {
         const current = runtimeMap.get(pet.id);
         if (!current) {

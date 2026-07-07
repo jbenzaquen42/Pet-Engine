@@ -1,4 +1,4 @@
-import { Activity, Bell, Cat, Crosshair, Eye, EyeOff, Footprints, Moon, MousePointer2, RotateCcw, Sparkles, Zap } from "lucide-react";
+import { Activity, Bell, Cat, Crosshair, Droplets, Eye, EyeOff, Footprints, Moon, MousePointer2, RotateCcw, Sparkles, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Behavior, EngineSettings, PetProfile } from "../types";
 
@@ -51,6 +51,13 @@ export function CommandBar({ selectedPet, settings, onSettingsChange, onCommand,
         </IconButton>
         <IconButton active={settings.pounce} label="Pounce (cats)" onClick={() => onSettingsChange({ pounce: !settings.pounce })}>
           <Cat size={18} />
+        </IconButton>
+        <IconButton
+          active={settings.fountain.enabled}
+          label="Charles fountain"
+          onClick={() => onSettingsChange({ fountain: { ...settings.fountain, enabled: !settings.fountain.enabled } })}
+        >
+          <Droplets size={18} />
         </IconButton>
       </div>
 
