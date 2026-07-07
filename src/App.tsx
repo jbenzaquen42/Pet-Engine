@@ -93,6 +93,21 @@ function App() {
     window.petEngine.setAlwaysOnTop(settings.alwaysOnTop).catch(() => undefined);
   }, [settings.alwaysOnTop]);
 
+  // Start/stop the main-process cursor pump when follow mode changes.
+  useEffect(() => {
+    window.petEngine?.setFollow(settings.followMode);
+  }, [settings.followMode]);
+
+  // Mirror the tray "Follow mode" checkbox into settings.
+  useEffect(() => {
+    if (!window.petEngine?.onTrayToggleFollow) {
+      return;
+    }
+    return window.petEngine.onTrayToggleFollow((enabled) => {
+      updateSettings({ followMode: enabled });
+    });
+  }, [updateSettings]);
+
   const pushSnapshot = useCallback(() => {
     const snapshot: OverlaySnapshot = { companions: summonedCompanions, settings };
     window.petEngine?.pushSnapshot(snapshot);
@@ -226,9 +241,15 @@ function App() {
             selectedPet={selectedPet}
             settings={settings}
             onSettingsChange={updateSettings}
-            onCommand={() => undefined}
-            onCall={() => undefined}
-            onReset={() => undefined}
+            onCommand={(behavior, target = "selected") =>
+              window.petEngine?.pushCommand({
+                behavior,
+                target,
+                id: target === "selected" ? selectedPetId : undefined
+              })
+            }
+            onCall={() => window.petEngine?.pushCommand({ behavior: "walk", target: "selected", id: selectedPetId })}
+            onReset={() => window.petEngine?.pushCommand({ behavior: "idle", target: "all" })}
           />
         </section>
 

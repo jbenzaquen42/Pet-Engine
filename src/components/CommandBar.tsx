@@ -1,4 +1,4 @@
-import { Activity, Bell, Eye, EyeOff, Footprints, Home, Moon, MousePointer2, RotateCcw, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { Activity, Bell, Cat, Crosshair, Eye, EyeOff, Footprints, Moon, MousePointer2, RotateCcw, Sparkles, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Behavior, EngineSettings, PetProfile } from "../types";
 
@@ -46,11 +46,11 @@ export function CommandBar({ selectedPet, settings, onSettingsChange, onCommand,
         <IconButton active={settings.showNames} label="Name tags" onClick={() => onSettingsChange({ showNames: !settings.showNames })}>
           {settings.showNames ? <Eye size={18} /> : <EyeOff size={18} />}
         </IconButton>
-        <IconButton active={settings.desktopMode} label="Desktop mode" onClick={() => onSettingsChange({ desktopMode: !settings.desktopMode })}>
-          <Home size={18} />
+        <IconButton active={settings.followMode} label="Follow cursor" onClick={() => onSettingsChange({ followMode: !settings.followMode })}>
+          <Crosshair size={18} />
         </IconButton>
-        <IconButton active={settings.clickThrough} label="Click-through" onClick={() => onSettingsChange({ clickThrough: !settings.clickThrough })}>
-          <ShieldCheck size={18} />
+        <IconButton active={settings.pounce} label="Pounce (cats)" onClick={() => onSettingsChange({ pounce: !settings.pounce })}>
+          <Cat size={18} />
         </IconButton>
       </div>
 
