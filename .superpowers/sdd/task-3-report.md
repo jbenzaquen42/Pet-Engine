@@ -106,3 +106,48 @@ Result: PASS (`tsc --noEmit` and `vite build`)
 ## Concerns
 
 - The focused tests required by the brief cover markup presence and shared component rendering, but not interactive browser behavior. I added a build verification pass to reduce risk.
+
+## Fix Follow-Up
+
+### Review Findings Addressed
+
+- Fixed `timerProgress` so it now uses the selected timer duration instead of a hardcoded 25-minute denominator.
+- Added regression coverage for timer progress synchronization by introducing a shared `getTimerProgress(timerSeconds, timerMinutes)` helper and testing:
+  - a 50-minute timer at 50:00 starts at `0`
+  - a 50-minute timer at 25:00 reports `0.5`
+
+### RED
+
+Updated `src/components/TimerTool.test.tsx` first with the new regression assertions, then ran:
+
+```bash
+npx vitest run src/components/ToolDrawer.test.tsx src/components/TimerTool.test.tsx src/components/ToolPopout.test.tsx
+```
+
+Observed failure evidence:
+
+- `TimerTool.test.tsx` failed with `TypeError: getTimerProgress is not a function`
+
+### GREEN
+
+Implemented `getTimerProgress` in `src/components/TimerTool.tsx` and switched `src/App.tsx` to use it for `timerProgress`.
+
+Re-ran:
+
+```bash
+npx vitest run src/components/ToolDrawer.test.tsx src/components/TimerTool.test.tsx src/components/ToolPopout.test.tsx
+```
+
+Result:
+
+- 3 test files passed
+- 7 tests passed
+- exit code 0
+
+Additional verification:
+
+```bash
+npm run build
+```
+
+Result: PASS (`tsc --noEmit` and `vite build`)

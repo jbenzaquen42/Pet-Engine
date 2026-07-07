@@ -63,6 +63,11 @@ export function TimerTool({
   );
 }
 
+export function getTimerProgress(timerSeconds: number, timerMinutes: number) {
+  const totalSeconds = Math.max(1, timerMinutes * 60);
+  return 1 - timerSeconds / totalSeconds;
+}
+
 function formatTimer(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;

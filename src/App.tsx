@@ -12,7 +12,7 @@ import {
 import { CommandBar } from "./components/CommandBar";
 import { CompanionEditor } from "./components/CompanionEditor";
 import { CompanionTray } from "./components/CompanionTray";
-import { TimerTool } from "./components/TimerTool";
+import { getTimerProgress, TimerTool } from "./components/TimerTool";
 import { ToolDrawer, type ToolTab } from "./components/ToolDrawer";
 import { ToolPopout } from "./components/ToolPopout";
 import { uid, useLocalStorageState } from "./storage";
@@ -177,7 +177,7 @@ function App() {
   }, [timerRunning]);
 
   const completedTasks = tasks.filter((task) => task.done).length;
-  const timerProgress = 1 - timerSeconds / (25 * 60);
+  const timerProgress = getTimerProgress(timerSeconds, timerMinutes);
 
 
   const updateCompanions = useCallback(
