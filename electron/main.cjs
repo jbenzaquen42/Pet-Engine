@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, Tray, globalShortcut, ipcMain, nativeImage, screen, nativeTheme } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 let overlayWindow;
 let panelWindow;
@@ -7,6 +8,26 @@ let tray;
 let latestSnapshot = { companions: [], settings: {} };
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
+
+function boundsFilePath() {
+  return path.join(app.getPath("userData"), "panel-bounds.json");
+}
+
+function readSavedBounds() {
+  try {
+    return JSON.parse(fs.readFileSync(boundsFilePath(), "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+function saveBounds(bounds) {
+  try {
+    fs.writeFileSync(boundsFilePath(), JSON.stringify(bounds));
+  } catch {
+    // Position memory is a convenience; ignore write failures.
+  }
+}
 
 function loadPage(win, page) {
   if (isDev) {
@@ -47,9 +68,12 @@ function createOverlayWindow() {
 }
 
 function createPanelWindow() {
+  const saved = readSavedBounds();
   panelWindow = new BrowserWindow({
-    width: 420,
-    height: 620,
+    width: saved?.width ?? 420,
+    height: saved?.height ?? 620,
+    x: saved?.x,
+    y: saved?.y,
     minWidth: 380,
     minHeight: 520,
     transparent: true,
@@ -69,9 +93,14 @@ function createPanelWindow() {
   panelWindow.setAlwaysOnTop(true, "floating");
   loadPage(panelWindow, "index.html");
 
+  const persist = () => saveBounds(panelWindow.getBounds());
+  panelWindow.on("moved", persist);
+  panelWindow.on("resized", persist);
+
   panelWindow.on("close", (event) => {
     if (!app.isQuiting) {
       event.preventDefault();
+      persist();
       panelWindow.hide();
     }
   });
