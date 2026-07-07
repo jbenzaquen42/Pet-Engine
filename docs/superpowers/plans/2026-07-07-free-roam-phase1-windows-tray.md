@@ -20,12 +20,12 @@ Deferred to later phase plans: articulated rigs (Phase 2), follow mode + pounce 
 
 ## Task Completion Checklist
 
-- [ ] Task 1: Snapshot contract and hit-test math (pure, TDD)
-- [ ] Task 2: Overlay HTML entry and Vite multi-page build
-- [ ] Task 3: Reusable companion simulation hook
-- [ ] Task 4: Electron two-window shell, tray, and preload bridge
-- [ ] Task 5: Panel broadcasts snapshot; overlay consumes and roams
-- [ ] Task 6: Panel tray docking, position memory, and manual QA
+- [x] Task 1: Snapshot contract and hit-test math (pure, TDD)
+- [x] Task 2: Overlay HTML entry and Vite multi-page build
+- [x] Task 3: Reusable companion simulation hook
+- [x] Task 4: Electron two-window shell, tray, and preload bridge
+- [x] Task 5: Panel broadcasts snapshot; overlay consumes and roams
+- [x] Task 6: Panel tray docking, position memory, and dead-code cleanup (manual QA pending user run)
 
 ---
 
