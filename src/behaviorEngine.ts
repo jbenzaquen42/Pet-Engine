@@ -158,6 +158,14 @@ export function advanceCompanion(
     return { ...next, y: ground };
   }
 
+  // React: a brief happy pose after a click, then back to idle.
+  if (next.behavior === "react") {
+    if (elapsed > 850) {
+      return { ...next, y: ground, behavior: "idle", stateStartedAt: now };
+    }
+    return { ...next, y: ground };
+  }
+
   // Zoomies: a fast sprint to a target edge, then a skidding sit.
   if (next.behavior === "zoomies") {
     const target = next.targetX ?? (next.direction === 1 ? maxX : 8);

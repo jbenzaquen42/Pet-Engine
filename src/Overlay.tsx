@@ -33,12 +33,16 @@ export function Overlay() {
     [followMode, pounce]
   );
 
-  const { runtime, runtimeMap, beginDrag, dragPet, endDrag, command } = useCompanionSimulation({
+  const { runtime, runtimeMap, beginDrag, dragPet, endDrag, command, react } = useCompanionSimulation({
     companions: snapshot.companions,
     settings: snapshot.settings,
     getBounds,
     getFollow
   });
+
+  const pressMovedRef = useRef(false);
+  const pressOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const lastClickRef = useRef<{ id: string; t: number } | null>(null);
 
   useEffect(() => {
     if (!window.petEngine) {
@@ -108,6 +112,10 @@ export function Overlay() {
             vy: ((event.clientY - prev.y) / dt) * 16
           };
         }
+        const origin = pressOriginRef.current;
+        if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 5) {
+          pressMovedRef.current = true;
+        }
         dragSampleRef.current = { x: event.clientX, y: event.clientY, t: nowT };
         dragPet(event.clientX, event.clientY);
         return;
@@ -126,11 +134,32 @@ export function Overlay() {
     (id: string, event: PointerEvent<HTMLButtonElement>) => {
       event.currentTarget.setPointerCapture(event.pointerId);
       draggingRef.current = true;
+      pressMovedRef.current = false;
+      pressOriginRef.current = { x: event.clientX, y: event.clientY };
       dragSampleRef.current = { x: event.clientX, y: event.clientY, t: performance.now() };
       throwRef.current = { vx: 0, vy: 0 };
       beginDrag(id, event.clientX, event.clientY);
     },
     [beginDrag]
+  );
+
+  // A press that never moved is a click: single = react, double = happy hop.
+  const onPetClick = useCallback(
+    (id: string) => {
+      if (pressMovedRef.current) {
+        return;
+      }
+      const nowT = performance.now();
+      const last = lastClickRef.current;
+      if (last && last.id === id && nowT - last.t < 320) {
+        lastClickRef.current = null;
+        command("jump", [id]);
+      } else {
+        lastClickRef.current = { id, t: nowT };
+        react(id);
+      }
+    },
+    [command, react]
   );
 
   const onPetPointerUp = useCallback(() => {
@@ -162,8 +191,16 @@ export function Overlay() {
             onPointerDown={(event) => onPetPointerDown(pet.id, event)}
             onPointerUp={onPetPointerUp}
             onPointerCancel={onPetPointerUp}
+            onClick={() => onPetClick(pet.id)}
           >
             <PetAvatar pet={pet} behavior={current.behavior} />
+            {current.behavior === "react" && (
+              <span className="pet-hearts" aria-hidden="true">
+                <span>♥</span>
+                <span>♥</span>
+                <span>♥</span>
+              </span>
+            )}
           </button>
         );
       })}

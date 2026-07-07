@@ -165,7 +165,16 @@ export function useCompanionSimulation({
     );
   }, []);
 
+  const react = useCallback((id: string, behavior: Behavior = "react") => {
+    const now = performance.now();
+    setRuntime((current) =>
+      current.map((petRuntime) =>
+        petRuntime.id === id ? { ...petRuntime, behavior, vy: 0, stateStartedAt: now, lastInteractionAt: now } : petRuntime
+      )
+    );
+  }, []);
+
   const runtimeMap = useMemo(() => new Map(runtime.map((entry) => [entry.id, entry])), [runtime]);
 
-  return { runtime, runtimeMap, beginDrag, dragPet, endDrag, command };
+  return { runtime, runtimeMap, beginDrag, dragPet, endDrag, command, react };
 }

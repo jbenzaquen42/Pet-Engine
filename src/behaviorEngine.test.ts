@@ -277,6 +277,32 @@ describe("zoomies", () => {
   });
 });
 
+describe("click reaction", () => {
+  it("holds the react pose briefly then returns to idle", () => {
+    const held = advanceCompanion(
+      runtimeFor("martyn", { behavior: "react", stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    expect(held.behavior).toBe("react");
+
+    const done = advanceCompanion(
+      runtimeFor("martyn", { behavior: "react", stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0.5
+    );
+    expect(done.behavior).toBe("idle");
+  });
+});
+
 describe("pet-to-pet interactions", () => {
   const restingCats = () => [
     runtimeFor("martyn", { x: 300, behavior: "idle", lastInteractionAt: 0 }),
