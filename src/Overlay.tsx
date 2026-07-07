@@ -34,7 +34,7 @@ export function Overlay() {
     [followMode, pounce]
   );
 
-  const { runtime, runtimeMap, beginDrag, dragPet, endDrag, command, react } = useCompanionSimulation({
+  const { runtime, runtimeMap, beginDrag, dragPet, endDrag, command, come, react } = useCompanionSimulation({
     companions: snapshot.companions,
     settings: snapshot.settings,
     getBounds,
@@ -80,9 +80,13 @@ export function Overlay() {
           : incoming.id
             ? [incoming.id]
             : snapshot.companions.slice(0, 1).map((pet) => pet.id);
-      command(incoming.behavior, ids);
+      if (incoming.behavior === "come") {
+        come(ids);
+        return;
+      }
+      command(incoming.behavior, ids, Boolean(incoming.hold));
     });
-  }, [command, snapshot.companions]);
+  }, [command, come, snapshot.companions]);
 
   const boxes = useMemo<PetBox[]>(() => {
     return runtime
@@ -121,7 +125,10 @@ export function Overlay() {
         dragPet(event.clientX, event.clientY);
         return;
       }
-      const over = findPetAtPoint({ x: event.clientX, y: event.clientY }, boxesRef.current, 14) !== null;
+      // Hysteresis: a wider hit box while already hovering keeps the window from
+      // flip-flopping between interactive and click-through as the pet drifts.
+      const padding = interactiveRef.current ? 34 : 14;
+      const over = findPetAtPoint({ x: event.clientX, y: event.clientY }, boxesRef.current, padding) !== null;
       if (over !== interactiveRef.current) {
         interactiveRef.current = over;
         window.petEngine?.setOverlayInteractive(over);

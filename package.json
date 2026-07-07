@@ -34,7 +34,10 @@
       }
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "build/icon.png"
     },
     "nsis": {
@@ -43,6 +46,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "Pet Engine"
+    },
+    "portable": {
+      "artifactName": "Pet Engine ${version} portable.exe"
     }
   },
   "dependencies": {

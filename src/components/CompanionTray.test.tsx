@@ -9,10 +9,9 @@ describe("CompanionTray", () => {
       <CompanionTray
         companions={initialCompanionState.companions}
         focusedPetId="martyn"
-        selectedPetIds={["martyn"]}
         onFocus={() => undefined}
-        onSelectionChange={() => undefined}
         onToggleSummoned={() => undefined}
+        onHideAll={() => undefined}
       />
     );
 
@@ -22,36 +21,34 @@ describe("CompanionTray", () => {
     expect(markup).not.toContain("Locked");
   });
 
-  it("renders multi-select controls", () => {
+  it("gives each pet an edit affordance instead of checkboxes", () => {
     const markup = renderToStaticMarkup(
       <CompanionTray
         companions={initialCompanionState.companions}
         focusedPetId="martyn"
-        selectedPetIds={["martyn", "charles"]}
         onFocus={() => undefined}
-        onSelectionChange={() => undefined}
         onToggleSummoned={() => undefined}
+        onHideAll={() => undefined}
       />
     );
 
     expect(markup).toContain("Edit Martyn");
     expect(markup).toContain("Edit Charles");
-    expect(markup).toContain("2 selected");
+    expect(markup).not.toContain('type="checkbox"');
   });
 
-  it("renders a bulk control to hide catalog companions only", () => {
+  it("renders bulk controls to hide catalog pets and turn all off", () => {
     const markup = renderToStaticMarkup(
       <CompanionTray
         companions={initialCompanionState.companions}
         focusedPetId="martyn"
-        selectedPetIds={["martyn"]}
         onFocus={() => undefined}
-        onSelectionChange={() => undefined}
         onToggleSummoned={() => undefined}
+        onHideAll={() => undefined}
       />
     );
 
     expect(markup).toContain("Hide catalog pets");
-    expect(markup).not.toContain("Hide all companions");
+    expect(markup).toContain("All off");
   });
 });

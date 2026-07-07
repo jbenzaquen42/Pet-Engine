@@ -17,6 +17,7 @@ export type Pattern =
 export type AuthoredAvatar = "martyn" | "charles";
 export type AvatarId = Pattern | AuthoredAvatar;
 export type CompanionKind = "custom" | "catalog";
+export type PopoutTab = "notes" | "tasks" | "timer";
 export type Behavior =
   | "idle"
   | "walk"
@@ -36,6 +37,7 @@ export type Behavior =
   | "perch"
   | "drink"
   | "greet"
+  | "come"
   | "react";
 
 export interface PersonalityWeights {
@@ -82,6 +84,8 @@ export interface PetRuntime {
   stateStartedAt: number;
   targetX?: number;
   lastInteractionAt: number;
+  /** When true the behavior is locked (held) and skips autonomous transitions. */
+  held?: boolean;
 }
 
 export interface CompanionState {

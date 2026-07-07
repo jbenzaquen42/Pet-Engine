@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   advanceCompanion,
+  applyCuddle,
   applyFountain,
   applyNeighbors,
   clamp,
@@ -57,7 +58,8 @@ export function useCompanionSimulation({
       const follow = getFollow ? getFollow() : IDLE_FOLLOW;
       setRuntime((current) => {
         // Ambient interactions run first (skipped while following the cursor).
-        const withNeighbors = follow.active ? current : applyNeighbors(current, companions, bounds, now);
+        const withCuddle = follow.active ? current : applyCuddle(current, companions, bounds, now);
+        const withNeighbors = follow.active ? withCuddle : applyNeighbors(withCuddle, companions, bounds, now);
         const seeded = follow.active ? withNeighbors : applyFountain(withNeighbors, companions, settings, bounds, now);
         const advanced = seeded.map((petRuntime) => {
           if (dragRef.current?.id === petRuntime.id) {
@@ -87,7 +89,7 @@ export function useCompanionSimulation({
       }
       return current.map((petRuntime) =>
         petRuntime.id === id
-          ? { ...petRuntime, behavior: "drag", vy: 0, stateStartedAt: performance.now() }
+          ? { ...petRuntime, behavior: "drag", vy: 0, held: false, stateStartedAt: performance.now() }
           : petRuntime
       );
     });
@@ -164,12 +166,40 @@ export function useCompanionSimulation({
     [companions, settings, getBounds]
   );
 
-  const command = useCallback((behavior: Behavior, ids: string[]) => {
+  const command = useCallback((behavior: Behavior, ids: string[], hold = false) => {
     const now = performance.now();
     setRuntime((current) =>
-      current.map((petRuntime) => (ids.includes(petRuntime.id) ? commandRuntime(petRuntime, behavior, now) : petRuntime))
+      current.map((petRuntime) => (ids.includes(petRuntime.id) ? commandRuntime(petRuntime, behavior, now, hold) : petRuntime))
     );
   }, []);
+
+  // Call: walk the targeted pets to the center of the stage, then greet.
+  const come = useCallback(
+    (ids: string[]) => {
+      const now = performance.now();
+      const bounds = getBounds();
+      setRuntime((current) =>
+        current.map((petRuntime) => {
+          if (!ids.includes(petRuntime.id)) {
+            return petRuntime;
+          }
+          const pet = companions.find((profile) => profile.id === petRuntime.id);
+          const size = pet ? getPetSize(pet, settings) : 0;
+          const targetX = clamp(bounds.width / 2 - size / 2, 8, Math.max(8, bounds.width - size - 8));
+          return {
+            ...petRuntime,
+            behavior: "come",
+            targetX,
+            direction: targetX > petRuntime.x ? 1 : -1,
+            held: false,
+            stateStartedAt: now,
+            lastInteractionAt: now
+          };
+        })
+      );
+    },
+    [companions, settings, getBounds]
+  );
 
   const react = useCallback((id: string, behavior: Behavior = "react") => {
     const now = performance.now();
@@ -182,5 +212,5 @@ export function useCompanionSimulation({
 
   const runtimeMap = useMemo(() => new Map(runtime.map((entry) => [entry.id, entry])), [runtime]);
 
-  return { runtime, runtimeMap, beginDrag, dragPet, endDrag, command, react };
+  return { runtime, runtimeMap, beginDrag, dragPet, endDrag, command, come, react };
 }

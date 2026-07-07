@@ -1,38 +1,38 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { getSummonedCompanions } from "../companionState";
 import { initialCompanionState } from "../data";
 import { CompanionEditor } from "./CompanionEditor";
 
+const summoned = getSummonedCompanions(initialCompanionState.companions);
+
 describe("CompanionEditor", () => {
-  it("renders exact values for one selected pet", () => {
+  it("renders a card with sliders for each summoned pet", () => {
     const markup = renderToStaticMarkup(
-      <CompanionEditor
-        companions={initialCompanionState.companions}
-        selectedPetIds={["martyn"]}
-        onUpdateSelected={() => undefined}
-      />
+      <CompanionEditor pets={summoned} focusedPetId="martyn" onFocus={() => undefined} onUpdatePet={() => undefined} />
     );
 
     expect(markup).toContain("Martyn");
+    expect(markup).toContain("Charles");
     expect(markup).toContain("Size");
     expect(markup).toContain("Pace");
     expect(markup).toContain("Energy");
-    expect(markup).toContain("33%");
   });
 
-  it("renders mixed values for multi-selection", () => {
+  it("shows each pet's own value", () => {
     const markup = renderToStaticMarkup(
-      <CompanionEditor
-        companions={initialCompanionState.companions}
-        selectedPetIds={["martyn", "charles"]}
-        onUpdateSelected={() => undefined}
-      />
+      <CompanionEditor pets={summoned} focusedPetId="martyn" onFocus={() => undefined} onUpdatePet={() => undefined} />
     );
 
-    expect(markup).toContain("2 selected");
-    expect(markup).toContain("Mixed");
-    expect(markup).toContain('value="1.025"');
-    expect(markup).toContain('value="0.6"');
-    expect(markup).toContain('value="0.525"');
+    // Martyn energy 0.33, Charles energy 0.88
+    expect(markup).toContain("33%");
+    expect(markup).toContain("88%");
+  });
+
+  it("renders an empty state when nothing is summoned", () => {
+    const markup = renderToStaticMarkup(
+      <CompanionEditor pets={[]} focusedPetId="martyn" onFocus={() => undefined} onUpdatePet={() => undefined} />
+    );
+    expect(markup).toContain("No companions on screen");
   });
 });

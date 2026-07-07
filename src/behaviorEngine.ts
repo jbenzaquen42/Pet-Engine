@@ -55,13 +55,14 @@ export function reconcileRuntime(current: PetRuntime[], pets: PetProfile[], boun
   });
 }
 
-export function commandRuntime(runtime: PetRuntime, behavior: Behavior, now: number): PetRuntime {
+export function commandRuntime(runtime: PetRuntime, behavior: Behavior, now: number, hold = false): PetRuntime {
   return {
     ...runtime,
     behavior,
     stateStartedAt: now,
     vy: behavior === "fall" ? 1 : 0,
-    lastInteractionAt: now
+    lastInteractionAt: now,
+    held: hold
   };
 }
 
@@ -99,6 +100,46 @@ export function advanceCompanion(
     next.behavior !== "toss"
   ) {
     return applyFollow(next, pet, settings, bounds, delta, now, follow, ground, maxX, size);
+  }
+
+  // Held (locked) behavior: hold the chosen action, skip autonomous transitions.
+  if (next.held) {
+    return advanceHeld(next, pet, settings, delta, ground, maxX);
+  }
+
+  // Standalone pounce (outside follow mode): crouch, then a forward leap.
+  if (next.behavior === "stalk") {
+    if (elapsed > 450) {
+      return { ...next, y: ground, behavior: "pounce", stateStartedAt: now };
+    }
+    return { ...next, y: ground };
+  }
+  if (next.behavior === "pounce") {
+    const progress = Math.min(1, elapsed / 380);
+    const leap = (2.4 + pet.speed * 2.2) * settings.globalSpeed * (delta / 16.67);
+    const x = clamp(next.x + leap * next.direction, 8, maxX);
+    if (progress >= 1) {
+      return { ...next, x, y: ground, behavior: "idle", stateStartedAt: now };
+    }
+    return { ...next, x, y: ground - Math.sin(progress * Math.PI) * (40 + pet.energy * 30) };
+  }
+
+  // Come: walk to a summoned target point, then greet on arrival.
+  if (next.behavior === "come") {
+    const target = next.targetX ?? next.x;
+    const dx = target - next.x;
+    if (Math.abs(dx) > 6) {
+      const step = (0.9 + pet.speed * 1.1) * settings.globalSpeed * (delta / 16.67);
+      const direction: 1 | -1 = dx > 0 ? 1 : -1;
+      return {
+        ...next,
+        x: clamp(next.x + Math.min(Math.abs(dx), step) * direction, 8, maxX),
+        y: ground,
+        direction,
+        behavior: "come"
+      };
+    }
+    return { ...next, y: ground, behavior: "greet", targetX: undefined, stateStartedAt: now };
   }
 
   if (!settings.physics && (next.behavior === "fall" || next.behavior === "toss")) {
@@ -459,6 +500,94 @@ function chooseWeightedBehavior(pet: PetProfile, random: () => number): Behavior
   return "idle";
 }
 
+// Held behaviors keep doing their thing: walkers patrol, everyone else holds pose.
+function advanceHeld(
+  next: PetRuntime,
+  pet: PetProfile,
+  settings: EngineSettings,
+  delta: number,
+  ground: number,
+  maxX: number
+): PetRuntime {
+  if (next.behavior === "walk" || next.behavior === "chase") {
+    const step = (0.42 + pet.speed * 0.78) * settings.globalSpeed * (delta / 16.67);
+    let x = next.x + step * next.direction;
+    let direction = next.direction;
+    if (x <= 8 || x >= maxX) {
+      direction = direction === 1 ? -1 : 1;
+      x = clamp(x, 8, maxX);
+    }
+    return { ...next, x, y: ground, direction };
+  }
+  return { ...next, y: ground };
+}
+
+const CUDDLE_DIST = 118;
+
+/**
+ * Martyn and Charles cuddle: when both custom cats are resting, the livelier
+ * one walks over and then they nap together. Pure pre-pass; runs before the
+ * generic neighbor interactions so its cooldown suppresses double-firing.
+ */
+export function applyCuddle(
+  runtimes: PetRuntime[],
+  pets: PetProfile[],
+  bounds: StageBounds,
+  now: number,
+  random: () => number = Math.random
+): PetRuntime[] {
+  const petById = new Map(pets.map((pet) => [pet.id, pet]));
+  const martyn = runtimes.find((runtime) => runtime.id === "martyn");
+  const charles = runtimes.find((runtime) => runtime.id === "charles");
+  const martynPet = petById.get("martyn");
+  const charlesPet = petById.get("charles");
+  if (!martyn || !charles || !martynPet || !charlesPet) {
+    return runtimes;
+  }
+
+  const isResting = (runtime: PetRuntime) => runtime.behavior === "idle" || runtime.behavior === "sit";
+  if (!isResting(martyn) || !isResting(charles)) {
+    return runtimes;
+  }
+  const cooldownOk = now - martyn.lastInteractionAt > 6000 && now - charles.lastInteractionAt > 6000;
+  if (!cooldownOk || random() > 0.01) {
+    return runtimes;
+  }
+
+  const dist = Math.abs(martyn.x - charles.x);
+  if (dist <= CUDDLE_DIST) {
+    // Close enough: sync into a shared nap.
+    return runtimes.map((runtime) =>
+      runtime.id === "martyn" || runtime.id === "charles"
+        ? { ...runtime, behavior: "sleep", stateStartedAt: now, lastInteractionAt: now }
+        : runtime
+    );
+  }
+
+  // Apart: the higher-energy cat pads over to the other.
+  const walkerId = charlesPet.energy >= martynPet.energy ? "charles" : "martyn";
+  const walker = walkerId === "charles" ? charles : martyn;
+  const partner = walkerId === "charles" ? martyn : charles;
+  const side: 1 | -1 = walker.x >= partner.x ? 1 : -1;
+  const targetX = clamp(partner.x + side * (CUDDLE_DIST - 26), 40, Math.max(40, bounds.width - 40));
+  return runtimes.map((runtime) => {
+    if (runtime.id === walkerId) {
+      return {
+        ...runtime,
+        behavior: "come",
+        targetX,
+        direction: targetX > runtime.x ? 1 : -1,
+        stateStartedAt: now,
+        lastInteractionAt: now
+      };
+    }
+    if (runtime.id === partner.id) {
+      return { ...runtime, lastInteractionAt: now };
+    }
+    return runtime;
+  });
+}
+
 function applyFollow(
   next: PetRuntime,
   pet: PetProfile,
@@ -517,11 +646,11 @@ function applyFollow(
     };
   }
 
-  // Arrived: face the cursor. Cats pounce once the cursor has held still a beat.
+  // Arrived: hold position (deadzone) and just face the cursor. Not snapping to
+  // the moving slot each frame is what stops the jitter when the cursor is near.
   const direction: 1 | -1 = dx >= 0 ? 1 : -1;
   return {
     ...next,
-    y: target.y,
     direction,
     behavior: "watch",
     stateStartedAt: next.behavior === "watch" ? next.stateStartedAt : now

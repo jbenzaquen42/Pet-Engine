@@ -65,6 +65,8 @@ export function ToolDrawer({
   onTimerMinutesChange,
   stats
 }: ToolDrawerProps) {
+  const canPop = activeTab !== "stats";
+
   return (
     <aside className="tool-drawer">
       <div className="drawer-head">
@@ -72,26 +74,29 @@ export function ToolDrawer({
           <h2>Tools</h2>
           <p>Notes, tasks, focus, counters</p>
         </div>
+        {canPop && (
+          <button
+            type="button"
+            className="pop-tool-button"
+            onClick={() => onPopTool(activeTab)}
+            disabled={poppedTools.includes(activeTab)}
+            aria-label={`Pop out ${activeTab}`}
+            title={`Pop out ${activeTab} to its own window`}
+          >
+            <ExternalLink size={16} />
+          </button>
+        )}
       </div>
       <div className="tab-row" role="tablist" aria-label="Tool tabs">
-        <TabEntry>
-          <TabButton active={activeTab === "notes"} label="Notes" onClick={() => setActiveTab("notes")}>
-            <NotebookPen size={17} />
-          </TabButton>
-          <PopToolButton label="Notes" onClick={() => onPopTool("notes")} disabled={poppedTools.includes("notes")} />
-        </TabEntry>
-        <TabEntry>
-          <TabButton active={activeTab === "tasks"} label="Tasks" onClick={() => setActiveTab("tasks")}>
-            <ListTodo size={17} />
-          </TabButton>
-          <PopToolButton label="Tasks" onClick={() => onPopTool("tasks")} disabled={poppedTools.includes("tasks")} />
-        </TabEntry>
-        <TabEntry>
-          <TabButton active={activeTab === "timer"} label="Timer" onClick={() => setActiveTab("timer")}>
-            <AlarmClock size={17} />
-          </TabButton>
-          <PopToolButton label="Timer" onClick={() => onPopTool("timer")} disabled={poppedTools.includes("timer")} />
-        </TabEntry>
+        <TabButton active={activeTab === "notes"} label="Notes" onClick={() => setActiveTab("notes")}>
+          <NotebookPen size={17} />
+        </TabButton>
+        <TabButton active={activeTab === "tasks"} label="Tasks" onClick={() => setActiveTab("tasks")}>
+          <ListTodo size={17} />
+        </TabButton>
+        <TabButton active={activeTab === "timer"} label="Timer" onClick={() => setActiveTab("timer")}>
+          <AlarmClock size={17} />
+        </TabButton>
         <TabButton active={activeTab === "stats"} label="Stats" onClick={() => setActiveTab("stats")}>
           <Keyboard size={17} />
         </TabButton>
@@ -168,10 +173,6 @@ export function ToolDrawer({
   );
 }
 
-function TabEntry({ children }: { children: ReactNode }) {
-  return <div className="tab-entry">{children}</div>;
-}
-
 interface TabButtonProps {
   active: boolean;
   label: string;
@@ -206,25 +207,4 @@ function formatDuration(seconds: number) {
   }
   const hours = Math.floor(minutes / 60);
   return `${hours}h ${minutes % 60}m`;
-}
-
-interface PopToolButtonProps {
-  label: string;
-  onClick: () => void;
-  disabled: boolean;
-}
-
-function PopToolButton({ label, onClick, disabled }: PopToolButtonProps) {
-  return (
-    <button
-      type="button"
-      className="pop-tool-button"
-      onClick={onClick}
-      aria-label={`Pop out ${label}`}
-      title={`Pop out ${label}`}
-      disabled={disabled}
-    >
-      <ExternalLink size={16} />
-    </button>
-  );
 }

@@ -71,11 +71,10 @@ describe("ToolDrawer", () => {
     expect(statsMarkup).toContain("3");
   });
 
-  it("renders pop-out controls for notes tasks and timer", () => {
-    const markup = renderDrawer("timer");
-
-    expect(markup).toContain("Pop out Notes");
-    expect(markup).toContain("Pop out Tasks");
-    expect(markup).toContain("Pop out Timer");
+  it("renders a single pop-out control for the active tool", () => {
+    expect(renderDrawer("timer")).toContain("Pop out timer");
+    expect(renderDrawer("notes")).toContain("Pop out notes");
+    // Stats has no window to pop out.
+    expect(renderDrawer("stats")).not.toContain("Pop out");
   });
 });

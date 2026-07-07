@@ -226,7 +226,7 @@ button {
 .pet-card {
   width: 100%;
   display: grid;
-  grid-template-columns: 28px 48px minmax(0, 1fr) 34px 18px;
+  grid-template-columns: 48px minmax(0, 1fr) 34px 34px;
   align-items: center;
   gap: 10px;
   padding: 8px;
@@ -301,12 +301,35 @@ button {
   cursor: pointer;
 }
 
+.edit-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.edit-button:hover {
+  color: var(--teal-dark);
+  border-color: rgb(42 157 149 / 0.4);
+}
+
 .catalog-section {
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
-.clear-catalog {
+.tray-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.clear-catalog,
+.hide-all {
   min-height: 34px;
   display: inline-flex;
   align-items: center;
@@ -321,6 +344,16 @@ button {
   font-weight: 760;
 }
 
+.hide-all {
+  color: #b4472f;
+  border-color: rgb(180 71 47 / 0.35);
+}
+
+.hide-all:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .companion-editor {
   display: grid;
   gap: 12px;
@@ -329,6 +362,64 @@ button {
   border-radius: 8px;
   background: rgb(251 252 252 / 0.9);
   box-shadow: 0 8px 24px rgb(21 43 48 / 0.06);
+}
+
+.editor-cards {
+  display: grid;
+  gap: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.editor-card {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+.editor-card.active {
+  border-color: rgb(42 157 149 / 0.45);
+  background: #eefaf8;
+}
+
+.editor-card-head {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.editor-card-thumb {
+  width: 42px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.editor-card-title strong,
+.editor-card-title small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-card-title strong {
+  font-size: 14px;
+}
+
+.editor-card-title small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .editor-head {
@@ -878,7 +969,7 @@ textarea:focus {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   padding: 12px;
-  max-height: 320px;
+  max-height: 440px;
   overflow: hidden;
 }
 
@@ -953,6 +1044,10 @@ textarea:focus {
 .drawer-body,
 .tool-pane {
   min-height: 0;
+}
+
+.drawer-body {
+  overflow-y: auto;
 }
 
 .tool-pane {
@@ -1052,12 +1147,12 @@ textarea {
   display: grid;
   align-content: start;
   justify-items: center;
-  gap: 18px;
-  padding-top: 18px;
+  gap: 14px;
+  padding-top: 8px;
 }
 
 .timer-ring {
-  width: 180px;
+  width: 132px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -1069,7 +1164,7 @@ textarea {
 }
 
 .timer-ring span {
-  font-size: 35px;
+  font-size: 28px;
   font-weight: 840;
 }
 
@@ -1077,6 +1172,50 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.popout-window {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-strong, #fbfcfc);
+  overflow: hidden;
+}
+
+.popout-window-head {
+  -webkit-app-region: drag;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.popout-window-head h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.popout-window-close {
+  -webkit-app-region: no-drag;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  cursor: pointer;
+}
+
+.popout-window-body {
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
 }
 
 .tool-popout {

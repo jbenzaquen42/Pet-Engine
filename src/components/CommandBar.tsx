@@ -1,45 +1,88 @@
-import { Activity, Bell, Cat, Crosshair, Droplets, Eye, EyeOff, Footprints, LogIn, Moon, MousePointer2, RotateCcw, Sparkles, Zap } from "lucide-react";
+import {
+  Activity,
+  Bell,
+  Cat,
+  Crosshair,
+  Droplets,
+  Eye,
+  EyeOff,
+  Footprints,
+  LogIn,
+  Moon,
+  MousePointer2,
+  RotateCcw,
+  Shuffle,
+  Sparkles,
+  Zap
+} from "lucide-react";
 import type { ReactNode } from "react";
 import type { Behavior, EngineSettings, PetProfile } from "../types";
 
 interface CommandBarProps {
   selectedPet?: PetProfile;
   settings: EngineSettings;
+  heldBehavior: Behavior | null;
   onSettingsChange: (patch: Partial<EngineSettings>) => void;
-  onCommand: (behavior: Behavior, target?: "selected" | "all") => void;
+  onSetHeld: (behavior: Behavior | null) => void;
+  onAction: (behavior: Behavior) => void;
+  onGroupJump: () => void;
   onCall: () => void;
   onReset: () => void;
 }
 
-export function CommandBar({ selectedPet, settings, onSettingsChange, onCommand, onCall, onReset }: CommandBarProps) {
+export function CommandBar({
+  selectedPet,
+  settings,
+  heldBehavior,
+  onSettingsChange,
+  onSetHeld,
+  onAction,
+  onGroupJump,
+  onCall,
+  onReset
+}: CommandBarProps) {
+  const isCharles = selectedPet?.avatar === "charles";
+  const isCat = selectedPet?.species === "cat";
+
   return (
     <footer className="behavior-bar">
       <div className="behavior-group">
         <span className="selected-label">{selectedPet?.name ?? "Companion"}</span>
-        <IconButton label="Walk" onClick={() => onCommand("walk")}>
+        <IconButton active={heldBehavior === "walk"} label="Walk" onClick={() => onSetHeld("walk")}>
           <Footprints size={18} />
         </IconButton>
-        <IconButton label="Sit" onClick={() => onCommand("sit")}>
+        <IconButton active={heldBehavior === "sit"} label="Sit" onClick={() => onSetHeld("sit")}>
           <MousePointer2 size={18} />
         </IconButton>
-        <IconButton label="Nap" onClick={() => onCommand("sleep")}>
+        <IconButton active={heldBehavior === "sleep"} label="Nap" onClick={() => onSetHeld("sleep")}>
           <Moon size={18} />
         </IconButton>
-        <IconButton label="Jump" onClick={() => onCommand("jump")}>
-          <Zap size={18} />
-        </IconButton>
-        <IconButton label="Call" onClick={onCall}>
-          <Bell size={18} />
+        <IconButton active={heldBehavior === null} label="Auto (mix it up)" onClick={() => onSetHeld(null)}>
+          <Shuffle size={18} />
         </IconButton>
       </div>
 
       <div className="behavior-group">
-        <IconButton label="Group jump" onClick={() => onCommand("jump", "all")}>
+        <IconButton label="Jump" onClick={() => onAction("jump")}>
+          <Zap size={18} />
+        </IconButton>
+        <IconButton label="Call to center" onClick={onCall}>
+          <Bell size={18} />
+        </IconButton>
+        {isCat && (
+          <IconButton label="Pounce" onClick={() => onAction("stalk")}>
+            <Cat size={18} />
+          </IconButton>
+        )}
+        <IconButton label="Group jump" onClick={onGroupJump}>
           <Sparkles size={18} />
         </IconButton>
         <IconButton label="Reset positions" onClick={onReset}>
           <RotateCcw size={18} />
         </IconButton>
+      </div>
+
+      <div className="behavior-group">
         <IconButton active={settings.physics} label="Physics" onClick={() => onSettingsChange({ physics: !settings.physics })}>
           <Activity size={18} />
         </IconButton>
@@ -49,16 +92,15 @@ export function CommandBar({ selectedPet, settings, onSettingsChange, onCommand,
         <IconButton active={settings.followMode} label="Follow cursor" onClick={() => onSettingsChange({ followMode: !settings.followMode })}>
           <Crosshair size={18} />
         </IconButton>
-        <IconButton active={settings.pounce} label="Pounce (cats)" onClick={() => onSettingsChange({ pounce: !settings.pounce })}>
-          <Cat size={18} />
-        </IconButton>
-        <IconButton
-          active={settings.fountain.enabled}
-          label="Charles fountain"
-          onClick={() => onSettingsChange({ fountain: { ...settings.fountain, enabled: !settings.fountain.enabled } })}
-        >
-          <Droplets size={18} />
-        </IconButton>
+        {isCharles && (
+          <IconButton
+            active={settings.fountain.enabled}
+            label="Charles fountain"
+            onClick={() => onSettingsChange({ fountain: { ...settings.fountain, enabled: !settings.fountain.enabled } })}
+          >
+            <Droplets size={18} />
+          </IconButton>
+        )}
         <IconButton
           active={settings.launchAtLogin}
           label="Launch at login"

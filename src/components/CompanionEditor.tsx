@@ -1,10 +1,12 @@
-import { getSharedNumberValue } from "../companionState";
+import { useEffect, useRef } from "react";
+import { PetAvatar } from "../PetAvatar";
 import type { PetProfile } from "../types";
 
 interface CompanionEditorProps {
-  companions: PetProfile[];
-  selectedPetIds: string[];
-  onUpdateSelected: (patch: Partial<PetProfile>) => void;
+  pets: PetProfile[];
+  focusedPetId: string;
+  onFocus: (id: string) => void;
+  onUpdatePet: (id: string, patch: Partial<PetProfile>) => void;
 }
 
 const fields = [
@@ -13,51 +15,74 @@ const fields = [
   { key: "energy", label: "Energy", min: 0.05, max: 1, step: 0.01 }
 ] as const;
 
-function getFieldMidpoint(min: number, max: number) {
-  return (min + max) / 2;
-}
+export function CompanionEditor({ pets, focusedPetId, onFocus, onUpdatePet }: CompanionEditorProps) {
+  const focusedRef = useRef<HTMLDivElement | null>(null);
 
-export function CompanionEditor({ companions, selectedPetIds, onUpdateSelected }: CompanionEditorProps) {
-  const selected = companions.filter((pet) => selectedPetIds.includes(pet.id));
-  if (selected.length === 0) {
+  useEffect(() => {
+    focusedRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [focusedPetId]);
+
+  if (pets.length === 0) {
     return (
       <section className="companion-editor" aria-label="Companion editor">
-        <h2>No companion selected</h2>
+        <h2>No companions on screen</h2>
       </section>
     );
   }
 
-  const heading = selected.length === 1 ? selected[0].name : `${selected.length} selected`;
-
   return (
     <section className="companion-editor" aria-label="Companion editor">
-      <div className="editor-head">
-        <h2>{heading}</h2>
-        <small>{selected.length === 1 ? selected[0].breedLabel : "Multi-edit"}</small>
-      </div>
-      <div className="editor-fields">
-        {fields.map((field) => {
-          const value = getSharedNumberValue(companions, selectedPetIds, field.key);
-          const numeric = typeof value === "number" ? value : getFieldMidpoint(field.min, field.max);
-          return (
-            <label className="range-field" key={field.key}>
-              <span>
-                {field.label}
-                <strong>{value === "mixed" ? "Mixed" : `${Math.round(numeric * 100)}%`}</strong>
+      <div className="editor-cards">
+        {pets.map((pet) => (
+          <div
+            key={pet.id}
+            ref={pet.id === focusedPetId ? focusedRef : undefined}
+            className={`editor-card ${pet.id === focusedPetId ? "active" : ""}`}
+            onClick={() => onFocus(pet.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onFocus(pet.id);
+              }
+            }}
+          >
+            <div className="editor-card-head">
+              <span className="editor-card-thumb">
+                <PetAvatar pet={pet} compact />
               </span>
-              <input
-                type="range"
-                min={field.min}
-                max={field.max}
-                step={field.step}
-                value={numeric}
-                onChange={(event) =>
-                  onUpdateSelected({ [field.key]: Number(event.target.value) } as Partial<PetProfile>)
-                }
-              />
-            </label>
-          );
-        })}
+              <span className="editor-card-title">
+                <strong>{pet.name}</strong>
+                <small>{pet.breedLabel}</small>
+              </span>
+            </div>
+            <div className="editor-fields">
+              {fields.map((field) => {
+                const numeric = pet[field.key];
+                return (
+                  <label className="range-field" key={field.key}>
+                    <span>
+                      {field.label}
+                      <strong>{`${Math.round(numeric * 100)}%`}</strong>
+                    </span>
+                    <input
+                      type="range"
+                      min={field.min}
+                      max={field.max}
+                      step={field.step}
+                      value={numeric}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) =>
+                        onUpdatePet(pet.id, { [field.key]: Number(event.target.value) } as Partial<PetProfile>)
+                      }
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

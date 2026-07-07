@@ -16,17 +16,9 @@ import { getTimerProgress, TimerTool } from "./components/TimerTool";
 import { ToolDrawer, type ToolTab } from "./components/ToolDrawer";
 import { ToolPopout } from "./components/ToolPopout";
 import { uid, useLocalStorageState } from "./storage";
-import type { EngineSettings, PetProfile, TaskItem } from "./types";
+import { STORAGE_KEYS } from "./storageKeys";
+import type { Behavior, EngineSettings, PetProfile, TaskItem } from "./types";
 import type { OverlaySnapshot } from "./shared/overlayBridge";
-
-const STORAGE_KEYS = {
-  companions: "personal-pet-engine:companions:v2",
-  settings: "personal-pet-engine:settings",
-  notes: "personal-pet-engine:notes",
-  tasks: "personal-pet-engine:tasks",
-  stats: "personal-pet-engine:stats",
-  firstRun: "personal-pet-engine:first-run-seen"
-};
 
 
 interface StatsState {
@@ -66,7 +58,7 @@ function App() {
   const [tasks, setTasks] = useLocalStorageState<TaskItem[]>(STORAGE_KEYS.tasks, initialTasks);
   const [stats, setStats] = useLocalStorageState<StatsState>(STORAGE_KEYS.stats, initialStats);
   const [focusedPetId, setFocusedPetId] = useState(() => summonedCompanions[0]?.id ?? "martyn");
-  const [selectedPetIds, setSelectedPetIds] = useState<string[]>(() => [summonedCompanions[0]?.id ?? "martyn"]);
+  const [heldBehavior, setHeldBehavior] = useState<Behavior | null>(null);
   const [toolTab, setToolTab] = useState<ToolTab>("notes");
   const [newTask, setNewTask] = useState("");
   const [timerMinutes, setTimerMinutes] = useState(25);
@@ -195,20 +187,48 @@ function App() {
       updateCompanions((current) => setCompanionSummoned(current, id, summoned));
       if (summoned) {
         setFocusedPetId(id);
-        setSelectedPetIds([id]);
       }
     },
     [updateCompanions]
   );
 
-  const updateSelectedCompanions = useCallback(
-    (patch: Partial<PetProfile>) => {
+  const hideAllCompanions = useCallback(() => {
+    updateCompanions((current) => current.map((pet) => (pet.summoned ? { ...pet, summoned: false } : pet)));
+  }, [updateCompanions]);
+
+  const updatePet = useCallback(
+    (id: string, patch: Partial<PetProfile>) => {
       setCompanionState((current) => ({
         ...current,
-        companions: updateCompanionsByIds(current.companions, selectedPetIds, patch)
+        companions: updateCompanionsByIds(current.companions, [id], patch)
       }));
     },
-    [selectedPetIds, setCompanionState]
+    [setCompanionState]
+  );
+
+  const pushCommand = useCallback(
+    (behavior: Behavior, target: "selected" | "all", hold = false) => {
+      window.petEngine?.pushCommand({
+        behavior,
+        target,
+        id: target === "selected" ? focusedPetId : undefined,
+        hold
+      });
+    },
+    [focusedPetId]
+  );
+
+  // Mode buttons lock every summoned pet into one action; Auto (null) releases them.
+  const setHeld = useCallback(
+    (behavior: Behavior | null) => {
+      setHeldBehavior(behavior);
+      if (behavior) {
+        pushCommand(behavior, "all", true);
+      } else {
+        pushCommand("idle", "all", false);
+      }
+    },
+    [pushCommand]
   );
 
   const addTask = useCallback(() => {
@@ -229,6 +249,12 @@ function App() {
   );
 
   const popTool = useCallback((tab: ToolTab) => {
+    // Prefer a real OS window (roams across screens, survives minimizing the
+    // panel). Fall back to an in-panel floating card outside Electron.
+    if (window.petEngine?.openPopout && tab !== "stats") {
+      window.petEngine.openPopout(tab);
+      return;
+    }
     setPoppedTools((current) => (current.includes(tab) ? current : [...current, tab]));
   }, []);
 
@@ -285,31 +311,28 @@ function App() {
         <CompanionTray
           companions={companions}
           focusedPetId={focusedPetId}
-          selectedPetIds={selectedPetIds}
           onFocus={setFocusedPetId}
-          onSelectionChange={setSelectedPetIds}
           onToggleSummoned={toggleSummoned}
+          onHideAll={hideAllCompanions}
         />
 
         <CompanionEditor
-          companions={companions}
-          selectedPetIds={selectedPetIds}
-          onUpdateSelected={updateSelectedCompanions}
+          pets={summonedCompanions}
+          focusedPetId={focusedPetId}
+          onFocus={setFocusedPetId}
+          onUpdatePet={updatePet}
         />
 
         <CommandBar
           selectedPet={selectedPet}
           settings={settings}
+          heldBehavior={heldBehavior}
           onSettingsChange={updateSettings}
-          onCommand={(behavior, target = "selected") =>
-            window.petEngine?.pushCommand({
-              behavior,
-              target,
-              id: target === "selected" ? focusedPetId : undefined
-            })
-          }
-          onCall={() => window.petEngine?.pushCommand({ behavior: "walk", target: "selected", id: focusedPetId })}
-          onReset={() => window.petEngine?.pushCommand({ behavior: "idle", target: "all" })}
+          onSetHeld={setHeld}
+          onAction={(behavior) => pushCommand(behavior, "selected", false)}
+          onGroupJump={() => pushCommand("jump", "all", false)}
+          onCall={() => pushCommand("come", "selected", false)}
+          onReset={() => setHeld(null)}
         />
 
         <div className="tools-region">
