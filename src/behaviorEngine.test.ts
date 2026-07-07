@@ -237,3 +237,41 @@ describe("grab and toss", () => {
     expect(settled.y).toBe(ground);
   });
 });
+
+describe("zoomies", () => {
+  it("bursts into zoomies from idle when the roll lands in the window", () => {
+    const next = advanceCompanion(
+      runtimeFor("charles", { behavior: "idle", x: 300, stateStartedAt: 0 }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      2000,
+      () => 0
+    );
+    expect(next.behavior).toBe("zoomies");
+    expect(next.targetX).toBeDefined();
+  });
+
+  it("sprints faster than a normal walk", () => {
+    const zoom = advanceCompanion(
+      runtimeFor("charles", { behavior: "zoomies", x: 300, targetX: 800, direction: 1 }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    const walk = advanceCompanion(
+      runtimeFor("charles", { behavior: "walk", x: 300, direction: 1 }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    expect(zoom.x - 300).toBeGreaterThan(walk.x - 300);
+  });
+});

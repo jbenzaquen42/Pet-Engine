@@ -150,7 +150,32 @@ export function advanceCompanion(
     return { ...next, y: ground };
   }
 
+  // Zoomies: a fast sprint to a target edge, then a skidding sit.
+  if (next.behavior === "zoomies") {
+    const target = next.targetX ?? (next.direction === 1 ? maxX : 8);
+    const direction: 1 | -1 = target > next.x ? 1 : -1;
+    const zoomStep = (2.2 + pet.speed * 2.4) * settings.globalSpeed * (delta / 16.67);
+    const x = clamp(next.x + zoomStep * direction, 8, maxX);
+    const reached = Math.abs(x - target) < 6 || x <= 8 || x >= maxX;
+    if (reached || elapsed > 2600) {
+      return { ...next, x, y: ground, direction, behavior: "sit", targetX: undefined, stateStartedAt: now };
+    }
+    return { ...next, x, y: ground, direction };
+  }
+
   if (next.behavior === "idle") {
+    // Rare zoomies burst, more likely for high-energy companions.
+    if (elapsed > 1400 && random() < 0.0016 + pet.energy * 0.004) {
+      const target = random() > 0.5 ? maxX : 8;
+      return {
+        ...next,
+        y: ground,
+        behavior: "zoomies",
+        targetX: target,
+        direction: target > next.x ? 1 : -1,
+        stateStartedAt: now
+      };
+    }
     const wakeChance = 0.0035 + pet.energy * 0.004;
     if (elapsed > 1100 && random() < wakeChance) {
       return {

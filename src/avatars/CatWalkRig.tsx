@@ -13,7 +13,7 @@ interface CatWalkRigProps {
 }
 
 // Locomotion behaviors get their own rig pose class; anything else walks.
-const RIG_POSES: Behavior[] = ["walk", "chase", "stalk", "pounce"];
+const RIG_POSES: Behavior[] = ["walk", "chase", "stalk", "pounce", "zoomies"];
 function poseClassFor(behavior: Behavior | undefined) {
   return behavior && RIG_POSES.includes(behavior) ? `pose-${behavior}` : "pose-walk";
 }

@@ -603,6 +603,29 @@ textarea:focus {
   animation: cat-tail 0.55s ease-in-out infinite;
 }
 
+/* Zoomies: frantic legs, slight forward lean. */
+.pose-zoomies {
+  transform: rotate(-4deg);
+}
+.pose-zoomies .leg {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+.pose-zoomies .leg-back-far,
+.pose-zoomies .leg-front-near {
+  animation: cat-step 0.2s linear infinite;
+}
+.pose-zoomies .leg-front-far,
+.pose-zoomies .leg-back-near {
+  animation: cat-step 0.2s linear infinite;
+  animation-delay: -0.1s;
+}
+.pose-zoomies .rig-tail {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: cat-tail 0.4s ease-in-out infinite;
+}
+
 /* Stalk: low crouch, legs still, tail flicks slowly. */
 .pose-stalk {
   transform-box: fill-box;
@@ -639,6 +662,8 @@ textarea:focus {
   .pose-walk .rig-body,
   .pose-chase .leg,
   .pose-chase .rig-tail,
+  .pose-zoomies .leg,
+  .pose-zoomies .rig-tail,
   .pose-stalk .rig-tail,
   .pose-pounce {
     animation: none;

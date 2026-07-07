@@ -13,7 +13,7 @@ const face = "#563927";
 
 // Behaviors that move the cat across the desktop use the side-profile walk rig;
 // everything else keeps the approved front-facing sticker.
-const LOCOMOTION: Behavior[] = ["walk", "chase", "stalk", "pounce"];
+const LOCOMOTION: Behavior[] = ["walk", "chase", "stalk", "pounce", "zoomies"];
 function isLocomotion(behavior: Behavior) {
   return LOCOMOTION.includes(behavior);
 }
