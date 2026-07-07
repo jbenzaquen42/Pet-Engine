@@ -24,12 +24,15 @@ Pet Engine is an Electron/Vite/React desktop companion app with a frameless cont
 4. Pet edits apply only to selected companions, not all cats or all pets.
 5. Single-pet editing shows exact values for that pet.
 6. Multi-pet editing applies changed values to all selected pets and clearly handles mixed values.
-7. Pounce visibly triggers for cats in follow mode when the cursor pauses near their assigned follow slot.
-8. Follow mode lets animals roam across the screen, not only along the bottom.
-9. Animals in follow mode avoid stacking on top of each other.
-10. Notes, To Do, and Timer can pop out from the drawer into separate floating tool surfaces.
-11. Timer controls must be reliably actionable in both drawer and pop-out surfaces: start, pause, reset, and duration changes.
-12. Toolbar icons and pet interactions get forgiving click targets without visually bloating the UI.
+7. Energy is an editable per-pet activity-frequency control: lower energy means the pet rests more often, higher energy means it chooses movement behaviors more often.
+8. Charles defaults to high pace and high energy.
+9. Martyn defaults to medium pace and about 33% energy.
+10. Pounce visibly triggers for cats in follow mode when the cursor pauses near their assigned follow slot.
+11. Follow mode lets animals roam across the screen, not only along the bottom.
+12. Animals in follow mode avoid stacking on top of each other.
+13. Notes, To Do, and Timer can pop out from the drawer into separate floating tool surfaces.
+14. Timer controls must be reliably actionable in both drawer and pop-out surfaces: start, pause, reset, and duration changes.
+15. Toolbar icons and pet interactions get forgiving click targets without visually bloating the UI.
 
 ## Architecture
 
@@ -51,7 +54,13 @@ The tray shows all companions with a clear summoned state. Selecting a pet does 
 
 ## Per-Pet Editing
 
-Global `globalScale` and `globalSpeed` remain as global multipliers, but the user-facing pet editor changes `PetProfile.size`, `PetProfile.speed`, and `PetProfile.energy` on selected pets. This keeps per-pet tuning independent while preserving existing engine math.
+Global `globalScale` and `globalSpeed` remain as global multipliers, but the user-facing pet editor changes `PetProfile.size`, `PetProfile.speed`, and `PetProfile.energy` on selected pets. Size controls visual scale, speed controls pace while moving, and energy controls how often a pet chooses movement instead of resting. This keeps per-pet tuning independent while preserving existing engine math.
+
+Default authored tuning changes:
+
+- Charles starts at high pace and high energy.
+- Martyn starts at medium pace and about 33% energy.
+- Both defaults are still editable through the per-pet editor.
 
 For multi-select:
 
@@ -102,6 +111,8 @@ Add or update focused tests before implementation:
 - Companion tray renders summon/hide controls for Martyn and Charles.
 - Per-pet update helpers change only selected companion ids.
 - Multi-select mixed values are represented consistently.
+- Default authored tuning gives Charles higher speed/energy than Martyn, with Martyn around one-third energy.
+- Higher energy increases movement behavior selection frequency relative to lower energy.
 - Timer controls render and invoke start/pause/reset/duration callbacks.
 - Pop-out tool trigger controls render for notes, tasks, and timer.
 - Follow target assignment produces separate slots for multiple pets.
