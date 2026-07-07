@@ -4,35 +4,38 @@ import { initialCompanionState } from "../data";
 import { CompanionTray } from "./CompanionTray";
 
 describe("CompanionTray", () => {
-  it("renders locked custom cats without editor controls", () => {
+  it("renders summon controls for authored and catalog companions", () => {
     const markup = renderToStaticMarkup(
       <CompanionTray
         companions={initialCompanionState.companions}
-        selectedPetId="martyn"
-        onSelect={() => undefined}
+        focusedPetId="martyn"
+        selectedPetIds={["martyn"]}
+        onFocus={() => undefined}
+        onSelectionChange={() => undefined}
         onToggleSummoned={() => undefined}
       />
     );
 
-    expect(markup).toContain("Martyn");
-    expect(markup).toContain("Charles");
-    expect(markup).toContain("Locked");
-    expect(markup).not.toContain("<input");
-    expect(markup).not.toContain("<select");
+    expect(markup).toContain("Hide Martyn");
+    expect(markup).toContain("Hide Charles");
+    expect(markup).toContain("Summon Bag");
+    expect(markup).not.toContain("Locked");
   });
 
-  it("renders catalog summon controls", () => {
+  it("renders multi-select controls", () => {
     const markup = renderToStaticMarkup(
       <CompanionTray
         companions={initialCompanionState.companions}
-        selectedPetId="martyn"
-        onSelect={() => undefined}
+        focusedPetId="martyn"
+        selectedPetIds={["martyn", "charles"]}
+        onFocus={() => undefined}
+        onSelectionChange={() => undefined}
         onToggleSummoned={() => undefined}
       />
     );
 
-    expect(markup).toContain("Original-style catalog");
-    expect(markup).toContain("Summon Bag");
-    expect(markup).toContain("Summon Patch");
+    expect(markup).toContain("Edit Martyn");
+    expect(markup).toContain("Edit Charles");
+    expect(markup).toContain("2 selected");
   });
 });

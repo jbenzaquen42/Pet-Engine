@@ -6,9 +6,11 @@ import {
   findSelectedCompanion,
   getSummonedCompanions,
   normalizeCompanionState,
+  updateCompanionsByIds,
   setCompanionSummoned
 } from "./companionState";
 import { CommandBar } from "./components/CommandBar";
+import { CompanionEditor } from "./components/CompanionEditor";
 import { CompanionTray } from "./components/CompanionTray";
 import { ToolDrawer, type ToolTab } from "./components/ToolDrawer";
 import { uid, useLocalStorageState } from "./storage";
@@ -61,7 +63,8 @@ function App() {
   const [notes, setNotes] = useLocalStorageState(STORAGE_KEYS.notes, "Today feels lighter with company on the desktop.");
   const [tasks, setTasks] = useLocalStorageState<TaskItem[]>(STORAGE_KEYS.tasks, initialTasks);
   const [stats, setStats] = useLocalStorageState<StatsState>(STORAGE_KEYS.stats, initialStats);
-  const [selectedPetId, setSelectedPetId] = useState(() => summonedCompanions[0]?.id ?? "martyn");
+  const [focusedPetId, setFocusedPetId] = useState(() => summonedCompanions[0]?.id ?? "martyn");
+  const [selectedPetIds, setSelectedPetIds] = useState<string[]>(() => [summonedCompanions[0]?.id ?? "martyn"]);
   const [toolTab, setToolTab] = useState<ToolTab>("notes");
   const [newTask, setNewTask] = useState("");
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
@@ -69,7 +72,7 @@ function App() {
   const [firstRunSeen, setFirstRunSeen] = useLocalStorageState<boolean>(STORAGE_KEYS.firstRun, false);
   const showFirstRun = !firstRunSeen;
 
-  const selectedPet = findSelectedCompanion(companions, selectedPetId);
+  const selectedPet = findSelectedCompanion(companions, focusedPetId);
 
   const updateSettings = useCallback(
     (patch: Partial<EngineSettings>) => {
@@ -83,10 +86,10 @@ function App() {
   }, [setStats]);
 
   useEffect(() => {
-    if (!summonedCompanions.some((pet) => pet.id === selectedPetId) && summonedCompanions[0]) {
-      setSelectedPetId(summonedCompanions[0].id);
+    if (!summonedCompanions.some((pet) => pet.id === focusedPetId) && summonedCompanions[0]) {
+      setFocusedPetId(summonedCompanions[0].id);
     }
-  }, [summonedCompanions, selectedPetId]);
+  }, [focusedPetId, summonedCompanions]);
 
   useEffect(() => {
     if (!window.petEngine) {
@@ -187,10 +190,21 @@ function App() {
     (id: string, summoned: boolean) => {
       updateCompanions((current) => setCompanionSummoned(current, id, summoned));
       if (summoned) {
-        setSelectedPetId(id);
+        setFocusedPetId(id);
+        setSelectedPetIds([id]);
       }
     },
     [updateCompanions]
+  );
+
+  const updateSelectedCompanions = useCallback(
+    (patch: Partial<PetProfile>) => {
+      setCompanionState((current) => ({
+        ...current,
+        companions: updateCompanionsByIds(current.companions, selectedPetIds, patch)
+      }));
+    },
+    [selectedPetIds, setCompanionState]
   );
 
   const addTask = useCallback(() => {
@@ -231,9 +245,17 @@ function App() {
       <section className="workspace">
         <CompanionTray
           companions={companions}
-          selectedPetId={selectedPetId}
-          onSelect={setSelectedPetId}
+          focusedPetId={focusedPetId}
+          selectedPetIds={selectedPetIds}
+          onFocus={setFocusedPetId}
+          onSelectionChange={setSelectedPetIds}
           onToggleSummoned={toggleSummoned}
+        />
+
+        <CompanionEditor
+          companions={companions}
+          selectedPetIds={selectedPetIds}
+          onUpdateSelected={updateSelectedCompanions}
         />
 
         <CommandBar
@@ -244,10 +266,10 @@ function App() {
             window.petEngine?.pushCommand({
               behavior,
               target,
-              id: target === "selected" ? selectedPetId : undefined
+              id: target === "selected" ? focusedPetId : undefined
             })
           }
-          onCall={() => window.petEngine?.pushCommand({ behavior: "walk", target: "selected", id: selectedPetId })}
+          onCall={() => window.petEngine?.pushCommand({ behavior: "walk", target: "selected", id: focusedPetId })}
           onReset={() => window.petEngine?.pushCommand({ behavior: "idle", target: "all" })}
         />
 

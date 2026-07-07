@@ -211,6 +211,13 @@ button {
   letter-spacing: 0;
 }
 
+.selection-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .pet-list {
   display: grid;
   gap: 8px;
@@ -219,7 +226,7 @@ button {
 .pet-card {
   width: 100%;
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 18px;
+  grid-template-columns: 28px 48px minmax(0, 1fr) 34px 18px;
   align-items: center;
   gap: 10px;
   padding: 8px;
@@ -250,6 +257,19 @@ button {
   overflow: hidden;
 }
 
+.pet-select {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+
+.pet-select input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--teal);
+}
+
 .pet-card strong,
 .pet-card small {
   display: block;
@@ -269,60 +289,53 @@ button {
   font-size: 12px;
 }
 
+.summon-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  color: var(--teal-dark);
+  cursor: pointer;
+}
+
 .catalog-section {
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
-.catalog-grid {
+.companion-editor {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.catalog-pet {
-  min-width: 0;
-  min-height: 74px;
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 16px;
-  align-items: center;
-  gap: 8px;
-  padding: 7px;
-  border: 1px solid var(--line);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgb(216 224 226 / 0.86);
   border-radius: 8px;
-  background: white;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 760;
-  text-align: left;
+  background: rgb(251 252 252 / 0.9);
+  box-shadow: 0 8px 24px rgb(21 43 48 / 0.06);
 }
 
-.catalog-pet.summoned {
-  border-color: rgb(42 157 149 / 0.42);
-  background: #e9f7f5;
+.editor-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.catalog-thumb {
-  width: 44px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
+.editor-head h2 {
+  margin: 0;
+  font-size: 15px;
 }
 
-.clear-catalog {
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: white;
+.editor-head small {
   color: var(--muted);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 760;
+  font-weight: 700;
+}
+
+.editor-fields {
+  display: grid;
+  gap: 10px;
 }
 
 .editor-section {
@@ -337,6 +350,12 @@ button {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.range-field span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .field input,
