@@ -5,6 +5,7 @@ const fs = require("fs");
 let overlayWindow;
 let panelWindow;
 let tray;
+let cursorTimer = null;
 let latestSnapshot = { companions: [], settings: {} };
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
@@ -124,7 +125,15 @@ function createTray() {
       label: "Follow mode",
       type: "checkbox",
       checked: false,
-      click: (item) => panelWindow?.webContents.send("tray:toggleFollow", item.checked)
+      click: (item) => {
+        // Keep the pump in sync immediately; the panel mirrors the setting.
+        if (item.checked) {
+          startCursorPump();
+        } else {
+          stopCursorPump();
+        }
+        panelWindow?.webContents.send("tray:toggleFollow", item.checked);
+      }
     },
     { type: "separator" },
     {
@@ -171,6 +180,47 @@ app.on("before-quit", () => {
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  if (cursorTimer) {
+    clearInterval(cursorTimer);
+    cursorTimer = null;
+  }
+});
+
+// Cursor pump: only runs while follow mode is on. Sends overlay-relative
+// coordinates so the overlay can compare against pet positions directly.
+function startCursorPump() {
+  if (cursorTimer) {
+    return;
+  }
+  cursorTimer = setInterval(() => {
+    if (!overlayWindow) {
+      return;
+    }
+    const point = screen.getCursorScreenPoint();
+    const wb = overlayWindow.getBounds();
+    overlayWindow.webContents.send("cursor:update", { x: point.x - wb.x, y: point.y - wb.y });
+  }, 33);
+}
+
+function stopCursorPump() {
+  if (cursorTimer) {
+    clearInterval(cursorTimer);
+    cursorTimer = null;
+  }
+  overlayWindow?.webContents.send("cursor:update", null);
+}
+
+ipcMain.on("follow:set", (_event, active) => {
+  if (active) {
+    startCursorPump();
+  } else {
+    stopCursorPump();
+  }
+});
+
+// Panel -> main -> overlay: behavior commands.
+ipcMain.on("command:push", (_event, command) => {
+  overlayWindow?.webContents.send("command:apply", command);
 });
 
 // Panel -> main -> overlay: state snapshot.

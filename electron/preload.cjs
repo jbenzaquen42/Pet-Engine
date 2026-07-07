@@ -23,6 +23,22 @@ contextBridge.exposeInMainWorld("petEngine", {
   // Overlay hit-test click-through
   setOverlayInteractive: (interactive) => ipcRenderer.send("overlay:setInteractive", interactive),
 
+  // Follow mode: cursor pump + follow toggle
+  setFollow: (active) => ipcRenderer.send("follow:set", active),
+  onCursor: (callback) => {
+    const listener = (_event, point) => callback(point);
+    ipcRenderer.on("cursor:update", listener);
+    return () => ipcRenderer.removeListener("cursor:update", listener);
+  },
+
+  // Behavior commands: panel -> overlay
+  pushCommand: (command) => ipcRenderer.send("command:push", command),
+  onCommand: (callback) => {
+    const listener = (_event, command) => callback(command);
+    ipcRenderer.on("command:apply", listener);
+    return () => ipcRenderer.removeListener("command:apply", listener);
+  },
+
   // Tray-driven events
   onTrayToggleFollow: (callback) => {
     const listener = (_event, enabled) => callback(Boolean(enabled));
