@@ -5,6 +5,7 @@ import { getPetSize } from "./behaviorEngine";
 import { normalizeSnapshot, type OverlaySnapshot } from "./shared/overlayBridge";
 import { findPetAtPoint, type PetBox } from "./overlay/hitTest";
 import { useCompanionSimulation, type SimulationBounds } from "./overlay/useCompanionSimulation";
+import type { FollowContext } from "./behaviorEngine";
 import { initialSettings } from "./data";
 
 const emptySnapshot: OverlaySnapshot = { companions: [], settings: { ...initialSettings } };
@@ -13,13 +14,28 @@ export function Overlay() {
   const [snapshot, setSnapshot] = useState<OverlaySnapshot>(emptySnapshot);
   const interactiveRef = useRef(false);
   const draggingRef = useRef(false);
+  const cursorRef = useRef<{ x: number; y: number } | null>(null);
+  const cursorMovedAtRef = useRef(0);
 
   const getBounds = useCallback((): SimulationBounds => ({ width: window.innerWidth, height: window.innerHeight }), []);
 
-  const { runtime, runtimeMap, beginDrag, dragPet, endDrag } = useCompanionSimulation({
+  const followMode = snapshot.settings.followMode;
+  const pounce = snapshot.settings.pounce;
+  const getFollow = useCallback(
+    (): FollowContext => ({
+      active: Boolean(followMode) && cursorRef.current !== null,
+      pounce: Boolean(pounce),
+      cursor: cursorRef.current,
+      cursorIdleMs: performance.now() - cursorMovedAtRef.current
+    }),
+    [followMode, pounce]
+  );
+
+  const { runtime, runtimeMap, beginDrag, dragPet, endDrag, command } = useCompanionSimulation({
     companions: snapshot.companions,
     settings: snapshot.settings,
-    getBounds
+    getBounds,
+    getFollow
   });
 
   useEffect(() => {
@@ -30,6 +46,36 @@ export function Overlay() {
     window.petEngine.requestSnapshot();
     return unsubscribe;
   }, []);
+
+  // Track the cursor (from the main-process pump) and when it last moved.
+  useEffect(() => {
+    if (!window.petEngine?.onCursor) {
+      return;
+    }
+    return window.petEngine.onCursor((point) => {
+      const prev = cursorRef.current;
+      if (!point || !prev || Math.hypot(point.x - prev.x, point.y - prev.y) > 3) {
+        cursorMovedAtRef.current = performance.now();
+      }
+      cursorRef.current = point;
+    });
+  }, []);
+
+  // Apply behavior commands pushed from the panel.
+  useEffect(() => {
+    if (!window.petEngine?.onCommand) {
+      return;
+    }
+    return window.petEngine.onCommand((incoming) => {
+      const ids =
+        incoming.target === "all"
+          ? snapshot.companions.map((pet) => pet.id)
+          : incoming.id
+            ? [incoming.id]
+            : snapshot.companions.slice(0, 1).map((pet) => pet.id);
+      command(incoming.behavior, ids);
+    });
+  }, [command, snapshot.companions]);
 
   const boxes = useMemo<PetBox[]>(() => {
     return runtime

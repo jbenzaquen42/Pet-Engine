@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   advanceCompanion,
   clamp,
+  commandRuntime,
   createInitialRuntime,
   getGroundY,
   getPetSize,
-  reconcileRuntime
+  reconcileRuntime,
+  type FollowContext
 } from "../behaviorEngine";
-import type { EngineSettings, PetProfile, PetRuntime } from "../types";
+import type { Behavior, EngineSettings, PetProfile, PetRuntime } from "../types";
 
 export interface SimulationBounds {
   width: number;
@@ -20,13 +22,21 @@ interface DragState {
   offsetY: number;
 }
 
+const IDLE_FOLLOW: FollowContext = { active: false, pounce: false, cursor: null, cursorIdleMs: 0 };
+
 interface UseCompanionSimulationArgs {
   companions: PetProfile[];
   settings: EngineSettings;
   getBounds: () => SimulationBounds;
+  getFollow?: () => FollowContext;
 }
 
-export function useCompanionSimulation({ companions, settings, getBounds }: UseCompanionSimulationArgs) {
+export function useCompanionSimulation({
+  companions,
+  settings,
+  getBounds,
+  getFollow
+}: UseCompanionSimulationArgs) {
   const [runtime, setRuntime] = useState<PetRuntime[]>(() => createInitialRuntime(companions, getBounds()));
   const dragRef = useRef<DragState | null>(null);
   const lastFrameRef = useRef<number>(performance.now());
@@ -41,6 +51,7 @@ export function useCompanionSimulation({ companions, settings, getBounds }: UseC
       const delta = Math.min(32, now - lastFrameRef.current);
       lastFrameRef.current = now;
       const bounds = getBounds();
+      const follow = getFollow ? getFollow() : IDLE_FOLLOW;
       setRuntime((current) =>
         current.map((petRuntime) => {
           if (dragRef.current?.id === petRuntime.id) {
@@ -50,14 +61,14 @@ export function useCompanionSimulation({ companions, settings, getBounds }: UseC
           if (!pet) {
             return petRuntime;
           }
-          return advanceCompanion(petRuntime, pet, settings, bounds, delta, now);
+          return advanceCompanion(petRuntime, pet, settings, bounds, delta, now, Math.random, follow);
         })
       );
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [companions, settings, getBounds]);
+  }, [companions, settings, getBounds, getFollow]);
 
   const beginDrag = useCallback((id: string, clientX: number, clientY: number) => {
     setRuntime((current) => {
@@ -125,7 +136,14 @@ export function useCompanionSimulation({ companions, settings, getBounds }: UseC
     );
   }, [companions, settings, getBounds]);
 
+  const command = useCallback((behavior: Behavior, ids: string[]) => {
+    const now = performance.now();
+    setRuntime((current) =>
+      current.map((petRuntime) => (ids.includes(petRuntime.id) ? commandRuntime(petRuntime, behavior, now) : petRuntime))
+    );
+  }, []);
+
   const runtimeMap = useMemo(() => new Map(runtime.map((entry) => [entry.id, entry])), [runtime]);
 
-  return { runtime, runtimeMap, beginDrag, dragPet, endDrag };
+  return { runtime, runtimeMap, beginDrag, dragPet, endDrag, command };
 }
