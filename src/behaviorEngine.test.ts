@@ -8,6 +8,7 @@ import {
   getPetSize,
   reconcileRuntime
 } from "./behaviorEngine";
+import type { FollowContext } from "./behaviorEngine";
 import type { PetRuntime } from "./types";
 
 const bounds = { width: 900, height: 520 };
@@ -98,5 +99,92 @@ describe("behavior engine", () => {
 
   it("uses size and global scale together", () => {
     expect(getPetSize(martyn, { ...initialSettings, globalScale: 1.25 })).toBeGreaterThan(getPetSize(martyn, initialSettings));
+  });
+});
+
+describe("follow mode", () => {
+  it("walks toward a far cursor and faces it", () => {
+    const next = advanceCompanion(
+      runtimeFor("charles", { x: 100, behavior: "idle" }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0.5,
+      { active: true, pounce: false, cursor: { x: 700, y: 300 }, cursorIdleMs: 0 }
+    );
+    expect(next.x).toBeGreaterThan(100);
+    expect(next.direction).toBe(1);
+    expect(["walk", "chase"]).toContain(next.behavior);
+  });
+
+  it("watches the cursor once it has arrived", () => {
+    const next = advanceCompanion(
+      runtimeFor("charles", { x: 300, behavior: "walk" }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0.5,
+      { active: true, pounce: false, cursor: { x: 320, y: 300 }, cursorIdleMs: 0 }
+    );
+    expect(next.behavior).toBe("watch");
+  });
+
+  it("makes a cat stalk then pounce when the cursor sits still nearby", () => {
+    const follow: FollowContext = { active: true, pounce: true, cursor: { x: 320, y: 300 }, cursorIdleMs: 1600 };
+    const stalking = advanceCompanion(
+      runtimeFor("martyn", { x: 300, behavior: "watch", stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5,
+      follow
+    );
+    expect(stalking.behavior).toBe("stalk");
+
+    const pouncing = advanceCompanion(
+      { ...stalking, stateStartedAt: 0 },
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      700,
+      () => 0.5,
+      follow
+    );
+    expect(pouncing.behavior).toBe("pounce");
+  });
+
+  it("does not pounce when pounce is disabled", () => {
+    const next = advanceCompanion(
+      runtimeFor("martyn", { x: 300, behavior: "watch", stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5,
+      { active: true, pounce: false, cursor: { x: 320, y: 300 }, cursorIdleMs: 5000 }
+    );
+    expect(next.behavior).toBe("watch");
+  });
+
+  it("ignores follow while being dragged", () => {
+    const next = advanceCompanion(
+      runtimeFor("charles", { behavior: "drag" }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0.5,
+      { active: true, pounce: true, cursor: { x: 700, y: 300 }, cursorIdleMs: 5000 }
+    );
+    expect(next.behavior).toBe("drag");
   });
 });

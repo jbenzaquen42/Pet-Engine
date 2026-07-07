@@ -5,13 +5,27 @@ export interface StageBounds {
   height: number;
 }
 
+export interface FollowContext {
+  active: boolean;
+  pounce: boolean;
+  cursor: { x: number; y: number } | null;
+  cursorIdleMs: number;
+}
+
+const IDLE_FOLLOW: FollowContext = { active: false, pounce: false, cursor: null, cursorIdleMs: 0 };
+
 const BASE_PET_SIZE = 150;
 
 export function createInitialRuntime(pets: PetProfile[], bounds: StageBounds = { width: 900, height: 520 }): PetRuntime[] {
   const now = performance.now();
+  const settings = defaultScaleSettings();
+  const largestSize = pets.reduce((max, pet) => Math.max(max, getPetSize(pet, settings)), 0);
+  const maxX = Math.max(8, bounds.width - largestSize - 8);
+  // Spread spawns a full pet-width apart so companions don't stack on each other.
+  const spacing = pets.length > 1 ? Math.min(largestSize + 16, (maxX - 24) / (pets.length - 1)) : 0;
   return pets.map((pet, index) => ({
     id: pet.id,
-    x: clamp(48 + index * 92, 8, Math.max(8, bounds.width - getPetSize(pet, defaultScaleSettings()) - 8)),
+    x: clamp(24 + index * spacing, 8, Math.max(8, bounds.width - getPetSize(pet, settings) - 8)),
     y: getGroundY(pet, defaultScaleSettings(), bounds.height),
     direction: index % 2 === 0 ? 1 : -1,
     behavior: index === 1 ? "walk" : "idle",
@@ -49,7 +63,8 @@ export function advanceCompanion(
   bounds: StageBounds,
   delta: number,
   now: number,
-  random: () => number = Math.random
+  random: () => number = Math.random,
+  follow: FollowContext = IDLE_FOLLOW
 ): PetRuntime {
   const size = getPetSize(pet, settings);
   const maxX = Math.max(8, bounds.width - size - 8);
@@ -63,6 +78,12 @@ export function advanceCompanion(
 
   if (next.behavior === "drag") {
     return next;
+  }
+
+  // Follow mode steers the pet toward the cursor (and lets cats pounce),
+  // but never interrupts an airborne jump or fall.
+  if (follow.active && follow.cursor && next.behavior !== "jump" && next.behavior !== "fall") {
+    return applyFollow(next, pet, settings, bounds, delta, now, follow, ground, maxX, size);
   }
 
   if (!settings.physics && next.behavior === "fall") {
@@ -172,6 +193,65 @@ function chooseWeightedBehavior(pet: PetProfile, random: () => number): Behavior
   return "idle";
 }
 
+function applyFollow(
+  next: PetRuntime,
+  pet: PetProfile,
+  settings: EngineSettings,
+  _bounds: StageBounds,
+  delta: number,
+  now: number,
+  follow: FollowContext,
+  ground: number,
+  maxX: number,
+  size: number
+): PetRuntime {
+  const cursor = follow.cursor!;
+  const target = clamp(cursor.x - size / 2, 8, maxX);
+  const dx = target - next.x;
+  const dist = Math.abs(dx);
+  const arrive = Math.max(28, size * 0.5);
+  const canPounce = follow.pounce && pet.species === "cat";
+  const elapsed = now - next.stateStartedAt;
+
+  // Pounce state machine: crouch (stalk) then leap (pounce), then watch again.
+  if (next.behavior === "stalk") {
+    if (elapsed > 620) {
+      return { ...next, y: ground, behavior: "pounce", stateStartedAt: now };
+    }
+    return { ...next, y: ground };
+  }
+  if (next.behavior === "pounce") {
+    const progress = Math.min(1, elapsed / 380);
+    const y = ground - Math.sin(progress * Math.PI) * (34 + pet.energy * 26);
+    const x = clamp(next.x + dx * 0.16, 8, maxX);
+    if (progress >= 1) {
+      return { ...next, x, y: ground, behavior: "watch", stateStartedAt: now };
+    }
+    return { ...next, x, y };
+  }
+
+  if (dist > arrive) {
+    const step = Math.min(dist, (0.9 + pet.speed * 1.3) * settings.globalSpeed * (delta / 16.67));
+    const direction: 1 | -1 = dx >= 0 ? 1 : -1;
+    const behavior: Behavior = dist > 320 ? "chase" : "walk";
+    const stateStartedAt = next.behavior === behavior ? next.stateStartedAt : now;
+    return { ...next, x: clamp(next.x + step * direction, 8, maxX), y: ground, direction, behavior, stateStartedAt };
+  }
+
+  // Arrived: face the cursor. Cats pounce once the cursor has held still a beat.
+  const direction: 1 | -1 = dx >= 0 ? 1 : -1;
+  if (canPounce && follow.cursorIdleMs > 1400) {
+    return { ...next, y: ground, direction, behavior: "stalk", stateStartedAt: now };
+  }
+  return {
+    ...next,
+    y: ground,
+    direction,
+    behavior: "watch",
+    stateStartedAt: next.behavior === "watch" ? next.stateStartedAt : now
+  };
+}
+
 function keepInBounds(runtime: PetRuntime, pet: PetProfile, settings: EngineSettings, bounds: StageBounds) {
   const maxX = Math.max(8, bounds.width - getPetSize(pet, settings) - 8);
   return {
@@ -189,6 +269,8 @@ function defaultScaleSettings(): EngineSettings {
     showNames: true,
     physics: true,
     clickThrough: false,
+    followMode: false,
+    pounce: false,
     globalScale: 1,
     globalSpeed: 1
   };

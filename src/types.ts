@@ -17,7 +17,19 @@ export type Pattern =
 export type AuthoredAvatar = "martyn" | "charles";
 export type AvatarId = Pattern | AuthoredAvatar;
 export type CompanionKind = "custom" | "catalog";
-export type Behavior = "idle" | "walk" | "sit" | "sleep" | "stretch" | "watch" | "jump" | "fall" | "drag";
+export type Behavior =
+  | "idle"
+  | "walk"
+  | "sit"
+  | "sleep"
+  | "stretch"
+  | "watch"
+  | "jump"
+  | "fall"
+  | "drag"
+  | "chase"
+  | "stalk"
+  | "pounce";
 
 export interface PersonalityWeights {
   idleWeight: number;
@@ -81,6 +93,8 @@ export interface EngineSettings {
   showNames: boolean;
   physics: boolean;
   clickThrough: boolean;
+  followMode: boolean;
+  pounce: boolean;
   globalScale: number;
   globalSpeed: number;
 }
