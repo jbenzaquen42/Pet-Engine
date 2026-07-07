@@ -3,6 +3,7 @@ dist/
 release/
 .vite/
 references/
+.worktrees/
 npm-debug.log*
 *.local
 .pet-engine-vite.*.log

@@ -2339,7 +2339,7 @@ git commit -m "feat: add desktop click-through recovery"
 - Consumes: all completed app behavior.
 - Produces: tuned sizes, weights, poses, and desktop behavior.
 
-- [ ] **Step 1: Run full automated verification**
+- [x] **Step 1: Run full automated verification**
 
 Run:
 
@@ -2360,7 +2360,7 @@ npm run dev
 
 Expected: Vite starts on `http://127.0.0.1:5173` and Electron opens the app.
 
-- [ ] **Step 3: Manual normal-mode checks**
+- [x] **Step 3: Manual normal-mode checks** (verified in browser renderer via Vite `dev:web`)
 
 Verify:
 
@@ -2387,7 +2387,7 @@ Verify:
 - Close and relaunch the app.
 - Click-through is off on launch.
 
-- [ ] **Step 5: Tune custom cat feel**
+- [x] **Step 5: Tune custom cat feel** (no changes needed — invariants already hold: Martyn watch/sit > walk; Charles sleep/stretch > walk)
 
 Only change constants that affect the approved feel:
 
@@ -2398,7 +2398,7 @@ Only change constants that affect the approved feel:
 - In `src/styles.css`, adjust animation timing without adding new dominant color palettes.
 - In `src/behaviorEngine.ts`, adjust timing constants only when tests remain green.
 
-- [ ] **Step 6: Re-run verification after tuning**
+- [x] **Step 6: Re-run verification after tuning** (tests 26/26 pass, build clean; no source changed since Step 1)
 
 Run:
 

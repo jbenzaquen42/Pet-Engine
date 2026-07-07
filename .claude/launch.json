@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev (electron + vite)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "dev:web (vite only)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:web", "--", "--port", "5183", "--strictPort"],
+      "port": 5183
+    },
+    {
+      "name": "dev:web audit",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:web", "--", "--port", "5193", "--strictPort"],
+      "port": 5193
+    },
+    {
+      "name": "preview (vite build preview)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    }
+  ]
+}
