@@ -20,10 +20,10 @@
 
 ## Task Completion Checklist
 
-- [ ] Task 1: `CatWalkRig` component + walk-cycle CSS + `PetAvatar` locomotion routing + structural tests
-- [ ] Task 2: Tune Martyn markings against reference (preview loop)
-- [ ] Task 3: Tune Charles markings against reference (preview loop)
-- [ ] Task 4: Full-app visual QA (both cats walking + stationary), tests + build green
+- [x] Task 1: `CatWalkRig` component + walk-cycle CSS + `PetAvatar` locomotion routing + structural tests
+- [x] Task 2: Tune Martyn markings against reference (preview loop)
+- [x] Task 3: Tune Charles markings against reference (preview loop)
+- [~] Task 4: Full-app visual QA — routing + fidelity verified (tests + rig-preview screenshots); live front↔rig transition pending user confirmation in the running app
 
 ---
 
