@@ -7,3 +7,7 @@ references/
 npm-debug.log*
 *.local
 .pet-engine-vite.*.log
+.superpowers/
+.superpowers/ssd
+
+.superpowers/sdd/progress.md
