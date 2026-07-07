@@ -14,11 +14,11 @@
 
 ## Task Completion Checklist
 
-- [ ] Task 1: Behavior/settings types + follow & pounce engine logic (TDD)
-- [ ] Task 2: Cursor pump + follow IPC (main, preload, types)
-- [ ] Task 3: Overlay threads cursor + follow into the simulation
-- [ ] Task 4: Panel follow/pounce toggles + tray sync + command re-wire
-- [ ] Task 5: Stalk/pounce/chase rig poses + visual QA
+- [x] Task 1: Behavior/settings types + follow & pounce engine logic (TDD)
+- [x] Task 2: Cursor pump + follow IPC (main, preload, types)
+- [x] Task 3: Overlay threads cursor + follow into the simulation
+- [x] Task 4: Panel follow/pounce toggles + tray sync + command re-wire
+- [x] Task 5: Stalk/pounce/chase rig poses — rendered/verified; live follow behavior pending user confirmation in the running app
 
 ---
 
