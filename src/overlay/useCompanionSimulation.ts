@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   advanceCompanion,
+  applyNeighbors,
   clamp,
   commandRuntime,
   createInitialRuntime,
@@ -52,8 +53,10 @@ export function useCompanionSimulation({
       lastFrameRef.current = now;
       const bounds = getBounds();
       const follow = getFollow ? getFollow() : IDLE_FOLLOW;
-      setRuntime((current) =>
-        current.map((petRuntime) => {
+      setRuntime((current) => {
+        // Ambient pet-to-pet interactions run first (skipped while following).
+        const seeded = follow.active ? current : applyNeighbors(current, companions, bounds, now);
+        return seeded.map((petRuntime) => {
           if (dragRef.current?.id === petRuntime.id) {
             return petRuntime;
           }
@@ -62,8 +65,8 @@ export function useCompanionSimulation({
             return petRuntime;
           }
           return advanceCompanion(petRuntime, pet, settings, bounds, delta, now, Math.random, follow);
-        })
-      );
+        });
+      });
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);

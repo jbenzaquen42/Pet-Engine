@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { customCompanions, initialSettings } from "./data";
 import {
   advanceCompanion,
+  applyNeighbors,
   commandRuntime,
   createInitialRuntime,
   getGroundY,
@@ -273,5 +274,35 @@ describe("zoomies", () => {
       () => 0.5
     );
     expect(zoom.x - 300).toBeGreaterThan(walk.x - 300);
+  });
+});
+
+describe("pet-to-pet interactions", () => {
+  const restingCats = () => [
+    runtimeFor("martyn", { x: 300, behavior: "idle", lastInteractionAt: 0 }),
+    runtimeFor("charles", { x: 360, behavior: "idle", lastInteractionAt: 0 })
+  ];
+
+  it("naps two nearby resting cats together on a low roll", () => {
+    const result = applyNeighbors(restingCats(), [martyn, charles], bounds, 10000, () => 0);
+    expect(result.map((runtime) => runtime.behavior)).toEqual(["sleep", "sleep"]);
+  });
+
+  it("leaves cats alone when they are far apart", () => {
+    const far = [
+      runtimeFor("martyn", { x: 100, behavior: "idle", lastInteractionAt: 0 }),
+      runtimeFor("charles", { x: 800, behavior: "idle", lastInteractionAt: 0 })
+    ];
+    const result = applyNeighbors(far, [martyn, charles], bounds, 10000, () => 0);
+    expect(result).toBe(far);
+  });
+
+  it("does nothing while the interaction is on cooldown", () => {
+    const recent = [
+      runtimeFor("martyn", { x: 300, behavior: "idle", lastInteractionAt: 9000 }),
+      runtimeFor("charles", { x: 360, behavior: "idle", lastInteractionAt: 9000 })
+    ];
+    const result = applyNeighbors(recent, [martyn, charles], bounds, 10000, () => 0);
+    expect(result).toBe(recent);
   });
 });

@@ -150,6 +150,14 @@ export function advanceCompanion(
     return { ...next, y: ground };
   }
 
+  // Greet: hold a nose-boop facing, then return to idle.
+  if (next.behavior === "greet") {
+    if (elapsed > 900) {
+      return { ...next, y: ground, behavior: "idle", stateStartedAt: now };
+    }
+    return { ...next, y: ground };
+  }
+
   // Zoomies: a fast sprint to a target edge, then a skidding sit.
   if (next.behavior === "zoomies") {
     const target = next.targetX ?? (next.direction === 1 ? maxX : 8);
@@ -213,6 +221,64 @@ export function advanceCompanion(
   }
 
   return { ...next, x, y: ground, direction };
+}
+
+/**
+ * Ambient pet-to-pet interactions: two nearby, resting cats occasionally
+ * greet (nose boop), nap together, or one chases the other off. Pure — runs
+ * as a pre-pass over all runtimes before advanceCompanion each tick.
+ */
+export function applyNeighbors(
+  runtimes: PetRuntime[],
+  pets: PetProfile[],
+  bounds: StageBounds,
+  now: number,
+  random: () => number = Math.random
+): PetRuntime[] {
+  const petById = new Map(pets.map((pet) => [pet.id, pet]));
+  const resting = runtimes.filter((runtime) => {
+    const pet = petById.get(runtime.id);
+    return pet && pet.species === "cat" && (runtime.behavior === "idle" || runtime.behavior === "sit");
+  });
+  if (resting.length < 2) {
+    return runtimes;
+  }
+
+  const [a, b] = resting;
+  const dist = Math.abs(a.x - b.x);
+  const cooldownOk = now - a.lastInteractionAt > 6000 && now - b.lastInteractionAt > 6000;
+  if (dist > 140 || !cooldownOk) {
+    return runtimes;
+  }
+  if (random() > 0.006) {
+    return runtimes;
+  }
+
+  const roll = random();
+  const updates = new Map<string, Partial<PetRuntime>>();
+  if (roll < 0.4) {
+    updates.set(a.id, { behavior: "sleep", stateStartedAt: now, lastInteractionAt: now });
+    updates.set(b.id, { behavior: "sleep", stateStartedAt: now, lastInteractionAt: now });
+  } else if (roll < 0.82) {
+    updates.set(a.id, { behavior: "greet", direction: b.x > a.x ? 1 : -1, stateStartedAt: now, lastInteractionAt: now });
+    updates.set(b.id, { behavior: "greet", direction: a.x > b.x ? 1 : -1, stateStartedAt: now, lastInteractionAt: now });
+  } else {
+    updates.set(a.id, {
+      behavior: "chase",
+      direction: b.x > a.x ? 1 : -1,
+      targetX: b.x,
+      stateStartedAt: now,
+      lastInteractionAt: now
+    });
+    updates.set(b.id, {
+      behavior: "zoomies",
+      direction: a.x > b.x ? -1 : 1,
+      targetX: a.x > b.x ? 8 : bounds.width,
+      stateStartedAt: now,
+      lastInteractionAt: now
+    });
+  }
+  return runtimes.map((runtime) => (updates.has(runtime.id) ? { ...runtime, ...updates.get(runtime.id) } : runtime));
 }
 
 export function getPetSize(pet: PetProfile, settings: EngineSettings) {
