@@ -1,12 +1,21 @@
 /// <reference types="vite/client" />
 
-interface Window {
-  petEngine?: {
-    minimize: () => Promise<void>;
-    close: () => Promise<void>;
-    setAlwaysOnTop: (enabled: boolean) => Promise<boolean>;
-    setDesktopMode: (enabled: boolean) => Promise<boolean>;
-    setClickThrough: (enabled: boolean) => Promise<boolean>;
-    onClickThroughChanged: (callback: (enabled: boolean) => void) => () => void;
-  };
+import type { OverlaySnapshot } from "./shared/overlayBridge";
+
+declare global {
+  interface Window {
+    petEngine?: {
+      minimizeToTray: () => Promise<void>;
+      close: () => Promise<void>;
+      setAlwaysOnTop: (enabled: boolean) => Promise<boolean>;
+      pushSnapshot: (snapshot: OverlaySnapshot) => void;
+      requestSnapshot: () => void;
+      onSnapshot: (callback: (snapshot: unknown) => void) => () => void;
+      onSnapshotRequested: (callback: () => void) => () => void;
+      setOverlayInteractive: (interactive: boolean) => void;
+      onTrayToggleFollow: (callback: (enabled: boolean) => void) => () => void;
+    };
+  }
 }
+
+export {};

@@ -1,21 +1,39 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, nativeTheme } = require("electron");
+const { app, BrowserWindow, Menu, Tray, globalShortcut, ipcMain, nativeImage, screen, nativeTheme } = require("electron");
 const path = require("path");
 
-let mainWindow;
-let clickThroughEnabled = false;
+let overlayWindow;
+let panelWindow;
+let tray;
+let latestSnapshot = { companions: [], settings: {} };
 
-const createWindow = () => {
-  mainWindow = new BrowserWindow({
-    width: 1220,
-    height: 780,
-    minWidth: 920,
-    minHeight: 620,
+const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
+
+function loadPage(win, page) {
+  if (isDev) {
+    win.loadURL(`${process.env.VITE_DEV_SERVER_URL}/${page}`);
+  } else {
+    win.loadFile(path.join(__dirname, "..", "dist", page));
+  }
+}
+
+function createOverlayWindow() {
+  const primary = screen.getPrimaryDisplay();
+  const { x, y, width, height } = primary.workArea;
+
+  overlayWindow = new BrowserWindow({
+    x,
+    y,
+    width,
+    height,
     transparent: true,
     backgroundColor: "#00000000",
     frame: false,
-    titleBarStyle: "hidden",
-    hasShadow: true,
-    resizable: true,
+    resizable: false,
+    movable: false,
+    skipTaskbar: true,
+    focusable: false,
+    hasShadow: false,
+    fullscreenable: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -23,39 +41,91 @@ const createWindow = () => {
     }
   });
 
-  mainWindow.setAlwaysOnTop(true, "floating");
-  nativeTheme.themeSource = "light";
+  overlayWindow.setAlwaysOnTop(true, "screen-saver");
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  loadPage(overlayWindow, "overlay.html");
+}
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-  } else {
-    mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+function createPanelWindow() {
+  panelWindow = new BrowserWindow({
+    width: 420,
+    height: 620,
+    minWidth: 380,
+    minHeight: 520,
+    transparent: true,
+    backgroundColor: "#00000000",
+    frame: false,
+    titleBarStyle: "hidden",
+    hasShadow: true,
+    resizable: true,
+    show: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  panelWindow.setAlwaysOnTop(true, "floating");
+  loadPage(panelWindow, "index.html");
+
+  panelWindow.on("close", (event) => {
+    if (!app.isQuiting) {
+      event.preventDefault();
+      panelWindow.hide();
+    }
+  });
+}
+
+function showPanel() {
+  if (!panelWindow) {
+    createPanelWindow();
+    return;
   }
+  panelWindow.show();
+  panelWindow.focus();
+}
 
-  clickThroughEnabled = false;
-  mainWindow.setIgnoreMouseEvents(false);
-  mainWindow.setFocusable(true);
-};
+function createTray() {
+  tray = new Tray(nativeImage.createEmpty());
+  tray.setToolTip("Pet Engine");
+  const menu = Menu.buildFromTemplate([
+    { label: "Show panel", click: showPanel },
+    {
+      label: "Follow mode",
+      type: "checkbox",
+      checked: false,
+      click: (item) => panelWindow?.webContents.send("tray:toggleFollow", item.checked)
+    },
+    { type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        app.isQuiting = true;
+        app.quit();
+      }
+    }
+  ]);
+  tray.setContextMenu(menu);
+  tray.on("double-click", showPanel);
+}
 
 app.whenReady().then(() => {
-  createWindow();
+  nativeTheme.themeSource = "light";
+  createOverlayWindow();
+  createPanelWindow();
+  createTray();
 
   globalShortcut.register("Control+Alt+P", () => {
-    clickThroughEnabled = false;
-    if (!mainWindow) {
-      return;
-    }
-
-    mainWindow.setIgnoreMouseEvents(false);
-    mainWindow.setFocusable(true);
-    mainWindow.show();
-    mainWindow.focus();
-    mainWindow.webContents.send("window:clickThroughChanged", false);
+    showPanel();
   });
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createOverlayWindow();
+      createPanelWindow();
+    } else {
+      showPanel();
     }
   });
 });
@@ -66,37 +136,40 @@ app.on("window-all-closed", () => {
   }
 });
 
+app.on("before-quit", () => {
+  app.isQuiting = true;
+});
+
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
 });
 
-ipcMain.handle("window:minimize", () => {
-  mainWindow?.minimize();
+// Panel -> main -> overlay: state snapshot.
+ipcMain.on("snapshot:push", (_event, snapshot) => {
+  latestSnapshot = snapshot;
+  overlayWindow?.webContents.send("snapshot:update", snapshot);
 });
 
-ipcMain.handle("window:close", () => {
-  mainWindow?.close();
+// Overlay startup -> main -> panel: request a fresh snapshot.
+ipcMain.on("snapshot:request", () => {
+  overlayWindow?.webContents.send("snapshot:update", latestSnapshot);
+  panelWindow?.webContents.send("snapshot:requested");
 });
 
-ipcMain.handle("window:alwaysOnTop", (_event, enabled) => {
-  mainWindow?.setAlwaysOnTop(Boolean(enabled), enabled ? "screen-saver" : "normal");
-  return mainWindow?.isAlwaysOnTop() ?? false;
+// Overlay hit-test -> main: only capture the mouse while it is over a pet.
+ipcMain.on("overlay:setInteractive", (_event, interactive) => {
+  overlayWindow?.setIgnoreMouseEvents(!interactive, { forward: true });
 });
 
-ipcMain.handle("window:desktopMode", (_event, enabled) => {
-  if (!mainWindow) {
-    return false;
-  }
-
-  mainWindow.setAlwaysOnTop(Boolean(enabled), enabled ? "screen-saver" : "normal");
-  mainWindow.setSkipTaskbar(Boolean(enabled));
-  mainWindow.setFocusable(!enabled);
-  return enabled;
+ipcMain.handle("panel:minimizeToTray", () => {
+  panelWindow?.hide();
 });
 
-ipcMain.handle("window:clickThrough", (_event, enabled) => {
-  clickThroughEnabled = Boolean(enabled);
-  mainWindow?.setIgnoreMouseEvents(clickThroughEnabled, { forward: true });
-  mainWindow?.webContents.send("window:clickThroughChanged", clickThroughEnabled);
-  return clickThroughEnabled;
+ipcMain.handle("panel:close", () => {
+  panelWindow?.hide();
+});
+
+ipcMain.handle("panel:alwaysOnTop", (_event, enabled) => {
+  panelWindow?.setAlwaysOnTop(Boolean(enabled), enabled ? "floating" : "normal");
+  return panelWindow?.isAlwaysOnTop() ?? false;
 });
