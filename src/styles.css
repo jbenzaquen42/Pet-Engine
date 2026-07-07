@@ -626,6 +626,24 @@ textarea:focus {
   animation: cat-tail 0.4s ease-in-out infinite;
 }
 
+/* Climb: cling to the wall, body tilted upward, legs paddling. */
+.pose-climb {
+  transform: rotate(-72deg);
+}
+.pose-climb .leg {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+.pose-climb .leg-back-far,
+.pose-climb .leg-front-near {
+  animation: cat-step 0.42s ease-in-out infinite;
+}
+.pose-climb .leg-front-far,
+.pose-climb .leg-back-near {
+  animation: cat-step 0.42s ease-in-out infinite;
+  animation-delay: -0.21s;
+}
+
 /* Stalk: low crouch, legs still, tail flicks slowly. */
 .pose-stalk {
   transform-box: fill-box;
@@ -664,6 +682,7 @@ textarea:focus {
   .pose-chase .rig-tail,
   .pose-zoomies .leg,
   .pose-zoomies .rig-tail,
+  .pose-climb .leg,
   .pose-stalk .rig-tail,
   .pose-pounce {
     animation: none;

@@ -187,6 +187,24 @@ export function advanceCompanion(
     return { ...next, y: ground };
   }
 
+  // Climb: scale the wall up to the perch height.
+  if (next.behavior === "climb") {
+    const perchY = 24;
+    const y = next.y - 1.8 * settings.globalSpeed * (delta / 16.67);
+    if (y <= perchY) {
+      return { ...next, y: perchY, behavior: "perch", stateStartedAt: now };
+    }
+    return { ...next, y };
+  }
+
+  // Perch: sit at the top a while, then drop off and fall.
+  if (next.behavior === "perch") {
+    if (elapsed > 4000 + pet.energy * 3000) {
+      return { ...next, behavior: "fall", vy: 1, stateStartedAt: now };
+    }
+    return next;
+  }
+
   // Zoomies: a fast sprint to a target edge, then a skidding sit.
   if (next.behavior === "zoomies") {
     const target = next.targetX ?? (next.direction === 1 ? maxX : 8);
@@ -247,6 +265,12 @@ export function advanceCompanion(
       behavior: chooseWeightedBehavior(pet, random),
       stateStartedAt: now
     };
+  }
+
+  // Cats near a side edge occasionally climb it and perch at the top.
+  if (pet.species === "cat" && (x <= 32 || x >= maxX - 32) && elapsed > 800 && random() < 0.02) {
+    const edgeX = x <= 32 ? 8 : maxX;
+    return { ...next, x: edgeX, y: ground, direction: edgeX === 8 ? -1 : 1, behavior: "climb", stateStartedAt: now };
   }
 
   return { ...next, x, y: ground, direction };

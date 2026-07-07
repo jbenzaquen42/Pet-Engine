@@ -304,6 +304,46 @@ describe("click reaction", () => {
   });
 });
 
+describe("edge climb and perch", () => {
+  it("starts climbing when a walking cat is pinned to the edge", () => {
+    const climbed = advanceCompanion(
+      runtimeFor("martyn", { behavior: "walk", x: 10, direction: -1, stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0
+    );
+    expect(climbed.behavior).toBe("climb");
+  });
+
+  it("climbs upward and reaches a perch", () => {
+    const mid = advanceCompanion(
+      runtimeFor("martyn", { behavior: "climb", x: 8, y: 200 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    expect(mid.behavior).toBe("climb");
+    expect(mid.y).toBeLessThan(200);
+
+    const top = advanceCompanion(
+      runtimeFor("martyn", { behavior: "climb", x: 8, y: 25 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    expect(top.behavior).toBe("perch");
+  });
+});
+
 describe("charles fountain", () => {
   const enabled = { ...initialSettings, fountain: { enabled: true, x: 0.7 } };
 
