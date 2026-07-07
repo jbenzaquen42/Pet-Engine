@@ -109,32 +109,51 @@ export function useCompanionSimulation({
     [companions, settings, getBounds]
   );
 
-  const endDrag = useCallback(() => {
-    const drag = dragRef.current;
-    dragRef.current = null;
-    if (!drag) {
-      return;
-    }
-    const bounds = getBounds();
-    const pet = companions.find((profile) => profile.id === drag.id);
-    if (!pet) {
-      return;
-    }
-    const ground = getGroundY(pet, settings, bounds.height);
-    setRuntime((current) =>
-      current.map((petRuntime) =>
-        petRuntime.id === drag.id
-          ? {
+  const endDrag = useCallback(
+    (throwVx = 0, throwVy = 0) => {
+      const drag = dragRef.current;
+      dragRef.current = null;
+      if (!drag) {
+        return;
+      }
+      const bounds = getBounds();
+      const pet = companions.find((profile) => profile.id === drag.id);
+      if (!pet) {
+        return;
+      }
+      const ground = getGroundY(pet, settings, bounds.height);
+      const speed = Math.hypot(throwVx, throwVy);
+      // A flick past the threshold becomes a spinning toss; otherwise fall/settle.
+      const tossed = settings.physics && speed > 6;
+      setRuntime((current) =>
+        current.map((petRuntime) => {
+          if (petRuntime.id !== drag.id) {
+            return petRuntime;
+          }
+          if (tossed) {
+            return {
               ...petRuntime,
-              behavior: petRuntime.y < ground - 4 && settings.physics ? "fall" : "idle",
-              vy: 0,
-              y: settings.physics ? petRuntime.y : ground,
+              behavior: "toss",
+              vx: throwVx,
+              vy: throwVy,
+              rotation: petRuntime.rotation ?? 0,
               stateStartedAt: performance.now()
-            }
-          : petRuntime
-      )
-    );
-  }, [companions, settings, getBounds]);
+            };
+          }
+          return {
+            ...petRuntime,
+            behavior: petRuntime.y < ground - 4 && settings.physics ? "fall" : "idle",
+            vx: 0,
+            vy: 0,
+            rotation: 0,
+            y: settings.physics ? petRuntime.y : ground,
+            stateStartedAt: performance.now()
+          };
+        })
+      );
+    },
+    [companions, settings, getBounds]
+  );
 
   const command = useCallback((behavior: Behavior, ids: string[]) => {
     const now = performance.now();

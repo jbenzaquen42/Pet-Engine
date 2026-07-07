@@ -29,7 +29,14 @@ export type Behavior =
   | "drag"
   | "chase"
   | "stalk"
-  | "pounce";
+  | "pounce"
+  | "toss"
+  | "zoomies"
+  | "climb"
+  | "perch"
+  | "drink"
+  | "greet"
+  | "react";
 
 export interface PersonalityWeights {
   idleWeight: number;
@@ -69,6 +76,8 @@ export interface PetRuntime {
   direction: 1 | -1;
   behavior: Behavior;
   vy: number;
+  vx?: number;
+  rotation?: number;
   phase: number;
   stateStartedAt: number;
   targetX?: number;
@@ -95,6 +104,12 @@ export interface EngineSettings {
   clickThrough: boolean;
   followMode: boolean;
   pounce: boolean;
+  fountain: FountainSettings;
   globalScale: number;
   globalSpeed: number;
+}
+
+export interface FountainSettings {
+  enabled: boolean;
+  x: number;
 }

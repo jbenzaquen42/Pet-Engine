@@ -16,6 +16,8 @@ export function Overlay() {
   const draggingRef = useRef(false);
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
   const cursorMovedAtRef = useRef(0);
+  const dragSampleRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const throwRef = useRef<{ vx: number; vy: number }>({ vx: 0, vy: 0 });
 
   const getBounds = useCallback((): SimulationBounds => ({ width: window.innerWidth, height: window.innerHeight }), []);
 
@@ -96,6 +98,17 @@ export function Overlay() {
   useEffect(() => {
     const onMove = (event: globalThis.PointerEvent) => {
       if (draggingRef.current) {
+        // Sample pointer velocity so a flick on release becomes a toss.
+        const nowT = performance.now();
+        const prev = dragSampleRef.current;
+        if (prev) {
+          const dt = Math.max(1, nowT - prev.t);
+          throwRef.current = {
+            vx: ((event.clientX - prev.x) / dt) * 16,
+            vy: ((event.clientY - prev.y) / dt) * 16
+          };
+        }
+        dragSampleRef.current = { x: event.clientX, y: event.clientY, t: nowT };
         dragPet(event.clientX, event.clientY);
         return;
       }
@@ -113,6 +126,8 @@ export function Overlay() {
     (id: string, event: PointerEvent<HTMLButtonElement>) => {
       event.currentTarget.setPointerCapture(event.pointerId);
       draggingRef.current = true;
+      dragSampleRef.current = { x: event.clientX, y: event.clientY, t: performance.now() };
+      throwRef.current = { vx: 0, vy: 0 };
       beginDrag(id, event.clientX, event.clientY);
     },
     [beginDrag]
@@ -121,7 +136,8 @@ export function Overlay() {
   const onPetPointerUp = useCallback(() => {
     if (draggingRef.current) {
       draggingRef.current = false;
-      endDrag();
+      dragSampleRef.current = null;
+      endDrag(throwRef.current.vx, throwRef.current.vy);
     }
   }, [endDrag]);
 
@@ -139,7 +155,7 @@ export function Overlay() {
             type="button"
             className={`overlay-pet behavior-${current.behavior}`}
             style={{
-              transform: `translate3d(${current.x}px, ${current.y}px, 0) scaleX(${current.direction})`,
+              transform: `translate3d(${current.x}px, ${current.y}px, 0) rotate(${current.rotation ?? 0}deg) scaleX(${current.direction})`,
               width: size,
               height: size
             }}

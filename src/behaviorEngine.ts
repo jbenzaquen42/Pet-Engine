@@ -81,13 +81,40 @@ export function advanceCompanion(
   }
 
   // Follow mode steers the pet toward the cursor (and lets cats pounce),
-  // but never interrupts an airborne jump or fall.
-  if (follow.active && follow.cursor && next.behavior !== "jump" && next.behavior !== "fall") {
+  // but never interrupts an airborne state.
+  if (
+    follow.active &&
+    follow.cursor &&
+    next.behavior !== "jump" &&
+    next.behavior !== "fall" &&
+    next.behavior !== "toss"
+  ) {
     return applyFollow(next, pet, settings, bounds, delta, now, follow, ground, maxX, size);
   }
 
-  if (!settings.physics && next.behavior === "fall") {
-    return { ...next, y: ground, behavior: "idle", stateStartedAt: now };
+  if (!settings.physics && (next.behavior === "fall" || next.behavior === "toss")) {
+    return { ...next, y: ground, vx: 0, rotation: 0, behavior: "idle", stateStartedAt: now };
+  }
+
+  // Toss: thrown pet arcs under gravity, spins, bounces off side walls, lands on its feet.
+  if (next.behavior === "toss") {
+    const vx = (next.vx ?? 0) * 0.995;
+    const vy = (next.vy ?? 0) + 0.9;
+    let x = next.x + vx;
+    let bounceVx = vx;
+    if (x <= 8) {
+      x = 8;
+      bounceVx = Math.abs(vx) * 0.6;
+    } else if (x >= maxX) {
+      x = maxX;
+      bounceVx = -Math.abs(vx) * 0.6;
+    }
+    const y = next.y + vy;
+    const rotation = (next.rotation ?? 0) + vx * 6;
+    if (y >= ground) {
+      return { ...next, x, y: ground, vx: 0, vy: 0, rotation: 0, behavior: "idle", stateStartedAt: now };
+    }
+    return { ...next, x, y, vx: bounceVx, vy, rotation };
   }
 
   if (next.behavior === "jump") {
@@ -271,6 +298,7 @@ function defaultScaleSettings(): EngineSettings {
     clickThrough: false,
     followMode: false,
     pounce: false,
+    fountain: { enabled: false, x: 0.7 },
     globalScale: 1,
     globalSpeed: 1
   };

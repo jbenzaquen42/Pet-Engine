@@ -188,3 +188,52 @@ describe("follow mode", () => {
     expect(next.behavior).toBe("drag");
   });
 });
+
+describe("grab and toss", () => {
+  it("carries a tossed pet sideways and spins it mid-air", () => {
+    const mid = advanceCompanion(
+      runtimeFor("martyn", { behavior: "toss", x: 200, y: 100, vx: 6, vy: -4, rotation: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    expect(mid.behavior).toBe("toss");
+    expect(mid.x).toBeGreaterThan(200);
+    expect(mid.rotation).not.toBe(0);
+  });
+
+  it("lands a tossed pet on its feet and clears spin/velocity", () => {
+    const ground = getGroundY(martyn, initialSettings, bounds.height);
+    const landed = advanceCompanion(
+      runtimeFor("martyn", { behavior: "toss", x: 200, y: ground - 1, vx: 2, vy: 5, rotation: 40 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    expect(landed.behavior).toBe("idle");
+    expect(landed.y).toBe(ground);
+    expect(landed.rotation).toBe(0);
+    expect(landed.vx).toBe(0);
+  });
+
+  it("settles instead of tossing when physics is off", () => {
+    const ground = getGroundY(martyn, initialSettings, bounds.height);
+    const settled = advanceCompanion(
+      runtimeFor("martyn", { behavior: "toss", x: 200, y: 100, vx: 6, vy: -4 }),
+      martyn,
+      { ...initialSettings, physics: false },
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    expect(settled.behavior).toBe("idle");
+    expect(settled.y).toBe(ground);
+  });
+});
