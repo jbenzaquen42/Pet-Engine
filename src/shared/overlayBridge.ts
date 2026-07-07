@@ -21,7 +21,7 @@ function normalizeCompanions(value: unknown): PetProfile[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.filter((pet): pet is PetProfile => isRecord(pet) && typeof (pet as PetProfile).id === "string");
+  return value.filter((pet): pet is PetProfile => isRecord(pet) && typeof pet.id === "string");
 }
 
 export function normalizeSnapshot(value: unknown): OverlaySnapshot {

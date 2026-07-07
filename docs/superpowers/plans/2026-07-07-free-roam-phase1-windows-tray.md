@@ -139,7 +139,7 @@ function normalizeCompanions(value: unknown): PetProfile[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.filter((pet): pet is PetProfile => isRecord(pet) && typeof (pet as PetProfile).id === "string");
+  return value.filter((pet): pet is PetProfile => isRecord(pet) && typeof pet.id === "string");
 }
 
 export function normalizeSnapshot(value: unknown): OverlaySnapshot {
@@ -244,9 +244,10 @@ Run:
 ```powershell
 npm test -- src/overlay/hitTest.test.ts
 npm test
+npm run build
 ```
 
-Expected: hit-test tests PASS and the full suite PASS.
+Expected: hit-test tests PASS, the full suite PASS, and `npm run build` (which runs `tsc --noEmit`) PASS. Note: `npm test` uses esbuild and does NOT type-check, so always run `npm run build` to catch type errors.
 
 - [ ] **Step 9: Commit Task 1**
 
