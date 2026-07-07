@@ -1,4 +1,4 @@
-import { Activity, Bell, Eye, EyeOff, Footprints, Home, Moon, MousePointer2, RotateCcw, ShieldCheck, Zap } from "lucide-react";
+import { Activity, Bell, Eye, EyeOff, Footprints, Home, Moon, MousePointer2, RotateCcw, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Behavior, EngineSettings, PetProfile } from "../types";
 
@@ -34,6 +34,9 @@ export function CommandBar({ selectedPet, settings, onSettingsChange, onCommand,
       </div>
 
       <div className="behavior-group">
+        <IconButton label="Group jump" onClick={() => onCommand("jump", "all")}>
+          <Sparkles size={18} />
+        </IconButton>
         <IconButton label="Reset positions" onClick={onReset}>
           <RotateCcw size={18} />
         </IconButton>
