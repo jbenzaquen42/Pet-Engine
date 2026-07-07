@@ -1,6 +1,6 @@
 import { Activity, Home, ListTodo, Minus, PanelRightClose, PanelRightOpen, Pin, Sparkles, X } from "lucide-react";
-import type { PointerEvent, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { initialCompanionState, initialSettings, initialTasks } from "./data";
 import {
   findSelectedCompanion,
@@ -8,21 +8,12 @@ import {
   normalizeCompanionState,
   setCompanionSummoned
 } from "./companionState";
-import {
-  advanceCompanion,
-  clamp,
-  commandRuntime,
-  createInitialRuntime,
-  getGroundY,
-  getPetSize,
-  reconcileRuntime
-} from "./behaviorEngine";
 import { CommandBar } from "./components/CommandBar";
 import { CompanionTray } from "./components/CompanionTray";
-import { PetStage } from "./components/PetStage";
 import { ToolDrawer, type ToolTab } from "./components/ToolDrawer";
 import { uid, useLocalStorageState } from "./storage";
-import type { Behavior, EngineSettings, PetProfile, PetRuntime, TaskItem } from "./types";
+import type { EngineSettings, PetProfile, TaskItem } from "./types";
+import type { OverlaySnapshot } from "./shared/overlayBridge";
 
 const STORAGE_KEYS = {
   companions: "personal-pet-engine:companions:v2",
@@ -32,12 +23,6 @@ const STORAGE_KEYS = {
   stats: "personal-pet-engine:stats"
 };
 
-
-interface DragState {
-  id: string;
-  offsetX: number;
-  offsetY: number;
-}
 
 interface StatsState {
   keys: number;
@@ -80,10 +65,6 @@ function App() {
   const [newTask, setNewTask] = useState("");
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
-  const [runtime, setRuntime] = useState<PetRuntime[]>(() => createInitialRuntime(summonedCompanions));
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<DragState | null>(null);
-  const lastFrameRef = useRef<number>(performance.now());
 
   const selectedPet = findSelectedCompanion(companions, selectedPetId);
 
@@ -99,14 +80,6 @@ function App() {
   }, [setStats]);
 
   useEffect(() => {
-    const rect = stageRef.current?.getBoundingClientRect();
-    setRuntime((current) =>
-      reconcileRuntime(current, summonedCompanions, {
-        width: rect?.width ?? 900,
-        height: rect?.height ?? 520
-      })
-    );
-
     if (!summonedCompanions.some((pet) => pet.id === selectedPetId) && summonedCompanions[0]) {
       setSelectedPetId(summonedCompanions[0].id);
     }
@@ -120,35 +93,21 @@ function App() {
     window.petEngine.setAlwaysOnTop(settings.alwaysOnTop).catch(() => undefined);
   }, [settings.alwaysOnTop]);
 
+  const pushSnapshot = useCallback(() => {
+    const snapshot: OverlaySnapshot = { companions: summonedCompanions, settings };
+    window.petEngine?.pushSnapshot(snapshot);
+  }, [summonedCompanions, settings]);
+
   useEffect(() => {
-    if (!window.petEngine) {
+    pushSnapshot();
+  }, [pushSnapshot]);
+
+  useEffect(() => {
+    if (!window.petEngine?.onSnapshotRequested) {
       return;
     }
-
-    window.petEngine.setDesktopMode(settings.desktopMode).catch(() => undefined);
-  }, [settings.desktopMode]);
-
-  useEffect(() => {
-    updateSettings({ clickThrough: false });
-  }, [updateSettings]);
-
-  useEffect(() => {
-    if (!window.petEngine) {
-      return;
-    }
-
-    window.petEngine.setClickThrough(settings.clickThrough).catch(() => undefined);
-  }, [settings.clickThrough]);
-
-  useEffect(() => {
-    if (!window.petEngine?.onClickThroughChanged) {
-      return;
-    }
-
-    return window.petEngine.onClickThroughChanged((enabled) => {
-      updateSettings({ clickThrough: enabled });
-    });
-  }, [updateSettings]);
+    return window.petEngine.onSnapshotRequested(() => pushSnapshot());
+  }, [pushSnapshot]);
 
   useEffect(() => {
     const onKeyDown = () => {
@@ -187,116 +146,6 @@ function App() {
     return () => window.clearInterval(id);
   }, [timerRunning]);
 
-  useEffect(() => {
-    let frame = 0;
-
-    const tick = (now: number) => {
-      const delta = Math.min(32, now - lastFrameRef.current);
-      lastFrameRef.current = now;
-
-      setRuntime((current) => {
-        const rect = stageRef.current?.getBoundingClientRect();
-        if (!rect) {
-          return current;
-        }
-
-        return current.map((petRuntime) => {
-          const pet = summonedCompanions.find((profile) => profile.id === petRuntime.id);
-          if (!pet) {
-            return petRuntime;
-          }
-
-          return advanceCompanion(
-            petRuntime,
-            pet,
-            settings,
-            { width: rect.width, height: rect.height },
-            delta,
-            now
-          );
-        });
-      });
-
-      frame = requestAnimationFrame(tick);
-    };
-
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [summonedCompanions, settings]);
-
-  useEffect(() => {
-    const onPointerMove = (event: globalThis.PointerEvent) => {
-      const drag = dragRef.current;
-      const rect = stageRef.current?.getBoundingClientRect();
-      if (!drag || !rect) {
-        return;
-      }
-
-      const pet = summonedCompanions.find((profile) => profile.id === drag.id);
-      if (!pet) {
-        return;
-      }
-
-      const size = getPetSize(pet, settings);
-      const nextX = clamp(event.clientX - rect.left - drag.offsetX, 8, Math.max(8, rect.width - size - 8));
-      const nextY = clamp(event.clientY - rect.top - drag.offsetY, 16, Math.max(16, rect.height - size * 0.8 - 22));
-
-      setRuntime((current) =>
-        current.map((petRuntime) =>
-          petRuntime.id === drag.id
-            ? {
-                ...petRuntime,
-                x: nextX,
-                y: nextY,
-                behavior: "drag",
-                vy: 0,
-                stateStartedAt: performance.now()
-              }
-            : petRuntime
-        )
-      );
-    };
-
-    const onPointerUp = () => {
-      const drag = dragRef.current;
-      const rect = stageRef.current?.getBoundingClientRect();
-      dragRef.current = null;
-
-      if (!drag || !rect) {
-        return;
-      }
-
-      const pet = summonedCompanions.find((profile) => profile.id === drag.id);
-      if (!pet) {
-        return;
-      }
-
-      const ground = getGroundY(pet, settings, rect.height);
-      setRuntime((current) =>
-        current.map((petRuntime) => {
-          if (petRuntime.id !== drag.id) {
-            return petRuntime;
-          }
-
-          return {
-            ...petRuntime,
-            behavior: petRuntime.y < ground - 4 && settings.physics ? "fall" : "idle",
-            vy: 0,
-            y: settings.physics ? petRuntime.y : ground,
-            stateStartedAt: performance.now()
-          };
-        })
-      );
-    };
-
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    return () => {
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-  }, [summonedCompanions, settings]);
-
   const completedTasks = tasks.filter((task) => task.done).length;
   const timerProgress = 1 - timerSeconds / (25 * 60);
 
@@ -321,73 +170,6 @@ function App() {
     [updateCompanions]
   );
 
-  const commandPet = useCallback(
-    (behavior: Behavior, target: "selected" | "all" = "selected") => {
-      const now = performance.now();
-      const targetIds = target === "all" ? summonedCompanions.map((pet) => pet.id) : [selectedPetId];
-
-      setRuntime((current) =>
-        current.map((petRuntime) => (targetIds.includes(petRuntime.id) ? commandRuntime(petRuntime, behavior, now) : petRuntime))
-      );
-    },
-    [summonedCompanions, selectedPetId]
-  );
-
-  const callSelectedPet = useCallback(() => {
-    const rect = stageRef.current?.getBoundingClientRect();
-    const pet = selectedPet;
-    if (!rect || !pet) {
-      commandPet("walk");
-      return;
-    }
-
-    const now = performance.now();
-    const size = getPetSize(pet, settings);
-    const center = rect.width / 2 - size / 2;
-
-    setRuntime((current) =>
-      current.map((petRuntime) =>
-        petRuntime.id === pet.id
-          ? {
-              ...petRuntime,
-              x: clamp(center, 8, Math.max(8, rect.width - size - 8)),
-              y: getGroundY(pet, settings, rect.height),
-              behavior: "idle",
-              stateStartedAt: now
-            }
-          : petRuntime
-      )
-    );
-  }, [commandPet, selectedPet, settings]);
-
-  const resetPets = useCallback(() => {
-    setRuntime(createInitialRuntime(summonedCompanions));
-  }, [summonedCompanions]);
-
-  const onPetPointerDown = useCallback(
-    (id: string, event: PointerEvent<HTMLButtonElement>) => {
-      const rect = stageRef.current?.getBoundingClientRect();
-      const petRuntime = runtime.find((entry) => entry.id === id);
-      if (!rect || !petRuntime) {
-        return;
-      }
-
-      event.currentTarget.setPointerCapture(event.pointerId);
-      dragRef.current = {
-        id,
-        offsetX: event.clientX - rect.left - petRuntime.x,
-        offsetY: event.clientY - rect.top - petRuntime.y
-      };
-      setSelectedPetId(id);
-      setRuntime((current) =>
-        current.map((entry) =>
-          entry.id === id ? { ...entry, behavior: "drag", stateStartedAt: performance.now(), vy: 0 } : entry
-        )
-      );
-    },
-    [runtime]
-  );
-
   const addTask = useCallback(() => {
     const text = newTask.trim();
     if (!text) {
@@ -404,8 +186,6 @@ function App() {
     },
     [setTasks]
   );
-
-  const petRuntimeMap = useMemo(() => new Map(runtime.map((entry) => [entry.id, entry])), [runtime]);
 
   return (
     <main className={`app-shell ${settings.desktopMode ? "desktop-mode" : ""}`}>
@@ -442,22 +222,13 @@ function App() {
             </div>
           </div>
 
-          <PetStage
-            stageRef={stageRef}
-            companions={summonedCompanions}
-            runtimeMap={petRuntimeMap}
-            selectedPetId={selectedPetId}
-            settings={settings}
-            onPetPointerDown={onPetPointerDown}
-          />
-
           <CommandBar
             selectedPet={selectedPet}
             settings={settings}
             onSettingsChange={updateSettings}
-            onCommand={commandPet}
-            onCall={callSelectedPet}
-            onReset={resetPets}
+            onCommand={() => undefined}
+            onCall={() => undefined}
+            onReset={() => undefined}
           />
         </section>
 
@@ -521,10 +292,10 @@ function TopBar({ alwaysOnTop, desktopMode, onTogglePin, onToggleDesktop }: TopB
         <IconButton active={alwaysOnTop} label="Always on top" onClick={onTogglePin}>
           <Pin size={17} />
         </IconButton>
-        <IconButton label="Minimize" onClick={() => window.petEngine?.minimize()}>
+        <IconButton label="Minimize to tray" onClick={() => window.petEngine?.minimizeToTray()}>
           <Minus size={17} />
         </IconButton>
-        <IconButton label="Close" tone="danger" onClick={() => window.petEngine?.close()}>
+        <IconButton label="Close to tray" tone="danger" onClick={() => window.petEngine?.close()}>
           <X size={17} />
         </IconButton>
       </div>
