@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, nativeTheme } = require("electron");
+const { app, BrowserWindow, globalShortcut, ipcMain, nativeTheme } = require("electron");
 const path = require("path");
 
 let mainWindow;
+let clickThroughEnabled = false;
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -30,10 +31,27 @@ const createWindow = () => {
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+
+  clickThroughEnabled = false;
+  mainWindow.setIgnoreMouseEvents(false);
+  mainWindow.setFocusable(true);
 };
 
 app.whenReady().then(() => {
   createWindow();
+
+  globalShortcut.register("Control+Alt+P", () => {
+    clickThroughEnabled = false;
+    if (!mainWindow) {
+      return;
+    }
+
+    mainWindow.setIgnoreMouseEvents(false);
+    mainWindow.setFocusable(true);
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.webContents.send("window:clickThroughChanged", false);
+  });
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -46,6 +64,10 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll();
 });
 
 ipcMain.handle("window:minimize", () => {
@@ -73,6 +95,8 @@ ipcMain.handle("window:desktopMode", (_event, enabled) => {
 });
 
 ipcMain.handle("window:clickThrough", (_event, enabled) => {
-  mainWindow?.setIgnoreMouseEvents(Boolean(enabled), { forward: true });
-  return Boolean(enabled);
+  clickThroughEnabled = Boolean(enabled);
+  mainWindow?.setIgnoreMouseEvents(clickThroughEnabled, { forward: true });
+  mainWindow?.webContents.send("window:clickThroughChanged", clickThroughEnabled);
+  return clickThroughEnabled;
 });

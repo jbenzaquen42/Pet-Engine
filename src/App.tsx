@@ -1,26 +1,5 @@
-import {
-  Activity,
-  AlarmClock,
-  Check,
-  Circle,
-  Clock3,
-  Home,
-  Keyboard,
-  ListTodo,
-  Minus,
-  NotebookPen,
-  PanelRightClose,
-  PanelRightOpen,
-  Pause,
-  Pin,
-  Play,
-  Plus,
-  Sparkles,
-  TimerReset,
-  Trash2,
-  X
-} from "lucide-react";
-import type { Dispatch, PointerEvent, ReactNode, SetStateAction } from "react";
+import { Activity, Home, ListTodo, Minus, PanelRightClose, PanelRightOpen, Pin, Sparkles, X } from "lucide-react";
+import type { PointerEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { initialCompanionState, initialSettings, initialTasks } from "./data";
 import {
@@ -41,6 +20,7 @@ import {
 import { CommandBar } from "./components/CommandBar";
 import { CompanionTray } from "./components/CompanionTray";
 import { PetStage } from "./components/PetStage";
+import { ToolDrawer, type ToolTab } from "./components/ToolDrawer";
 import { uid, useLocalStorageState } from "./storage";
 import type { Behavior, EngineSettings, PetProfile, PetRuntime, TaskItem } from "./types";
 
@@ -52,7 +32,6 @@ const STORAGE_KEYS = {
   stats: "personal-pet-engine:stats"
 };
 
-type ToolTab = "notes" | "tasks" | "timer" | "stats";
 
 interface DragState {
   id: string;
@@ -72,6 +51,18 @@ const initialStats: StatsState = {
   launches: 1
 };
 
+function normalizeSettings(value: unknown): EngineSettings {
+  if (!value || typeof value !== "object") {
+    return initialSettings;
+  }
+
+  return {
+    ...initialSettings,
+    ...(value as Partial<EngineSettings>),
+    clickThrough: false
+  };
+}
+
 function App() {
   const [companionState, setCompanionState] = useLocalStorageState(
     STORAGE_KEYS.companions,
@@ -80,7 +71,7 @@ function App() {
   );
   const companions = companionState.companions;
   const summonedCompanions = useMemo(() => getSummonedCompanions(companions), [companions]);
-  const [settings, setSettings] = useLocalStorageState<EngineSettings>(STORAGE_KEYS.settings, initialSettings);
+  const [settings, setSettings] = useLocalStorageState<EngineSettings>(STORAGE_KEYS.settings, initialSettings, normalizeSettings);
   const [notes, setNotes] = useLocalStorageState(STORAGE_KEYS.notes, "Today feels lighter with company on the desktop.");
   const [tasks, setTasks] = useLocalStorageState<TaskItem[]>(STORAGE_KEYS.tasks, initialTasks);
   const [stats, setStats] = useLocalStorageState<StatsState>(STORAGE_KEYS.stats, initialStats);
@@ -95,6 +86,13 @@ function App() {
   const lastFrameRef = useRef<number>(performance.now());
 
   const selectedPet = findSelectedCompanion(companions, selectedPetId);
+
+  const updateSettings = useCallback(
+    (patch: Partial<EngineSettings>) => {
+      setSettings((current) => ({ ...current, ...patch }));
+    },
+    [setSettings]
+  );
 
   useEffect(() => {
     setStats((current) => ({ ...current, launches: Math.max(1, current.launches) }));
@@ -129,6 +127,28 @@ function App() {
 
     window.petEngine.setDesktopMode(settings.desktopMode).catch(() => undefined);
   }, [settings.desktopMode]);
+
+  useEffect(() => {
+    updateSettings({ clickThrough: false });
+  }, [updateSettings]);
+
+  useEffect(() => {
+    if (!window.petEngine) {
+      return;
+    }
+
+    window.petEngine.setClickThrough(settings.clickThrough).catch(() => undefined);
+  }, [settings.clickThrough]);
+
+  useEffect(() => {
+    if (!window.petEngine?.onClickThroughChanged) {
+      return;
+    }
+
+    return window.petEngine.onClickThroughChanged((enabled) => {
+      updateSettings({ clickThrough: enabled });
+    });
+  }, [updateSettings]);
 
   useEffect(() => {
     const onKeyDown = () => {
@@ -280,12 +300,6 @@ function App() {
   const completedTasks = tasks.filter((task) => task.done).length;
   const timerProgress = 1 - timerSeconds / (25 * 60);
 
-  const updateSettings = useCallback(
-    (patch: Partial<EngineSettings>) => {
-      setSettings((current) => ({ ...current, ...patch }));
-    },
-    [setSettings]
-  );
 
   const updateCompanions = useCallback(
     (updater: (companions: PetProfile[]) => PetProfile[]) => {
@@ -518,152 +532,6 @@ function TopBar({ alwaysOnTop, desktopMode, onTogglePin, onToggleDesktop }: TopB
   );
 }
 
-interface ToolDrawerProps {
-  activeTab: ToolTab;
-  setActiveTab: (tab: ToolTab) => void;
-  notes: string;
-  onNotesChange: (value: string) => void;
-  tasks: TaskItem[];
-  newTask: string;
-  setNewTask: (value: string) => void;
-  addTask: () => void;
-  removeTask: (taskId: string) => void;
-  setTasks: Dispatch<SetStateAction<TaskItem[]>>;
-  timerSeconds: number;
-  timerRunning: boolean;
-  timerProgress: number;
-  onTimerToggle: () => void;
-  onTimerReset: () => void;
-  stats: StatsState;
-}
-
-function ToolDrawer({
-  activeTab,
-  setActiveTab,
-  notes,
-  onNotesChange,
-  tasks,
-  newTask,
-  setNewTask,
-  addTask,
-  removeTask,
-  setTasks,
-  timerSeconds,
-  timerRunning,
-  timerProgress,
-  onTimerToggle,
-  onTimerReset,
-  stats
-}: ToolDrawerProps) {
-  return (
-    <aside className="tool-drawer">
-      <div className="drawer-head">
-        <div>
-          <h2>Tools</h2>
-          <p>Notes, tasks, focus, counters</p>
-        </div>
-      </div>
-      <div className="tab-row" role="tablist" aria-label="Tool tabs">
-        <TabButton active={activeTab === "notes"} label="Notes" onClick={() => setActiveTab("notes")}>
-          <NotebookPen size={17} />
-        </TabButton>
-        <TabButton active={activeTab === "tasks"} label="Tasks" onClick={() => setActiveTab("tasks")}>
-          <ListTodo size={17} />
-        </TabButton>
-        <TabButton active={activeTab === "timer"} label="Timer" onClick={() => setActiveTab("timer")}>
-          <AlarmClock size={17} />
-        </TabButton>
-        <TabButton active={activeTab === "stats"} label="Stats" onClick={() => setActiveTab("stats")}>
-          <Keyboard size={17} />
-        </TabButton>
-      </div>
-
-      <div className="drawer-body">
-        {activeTab === "notes" && (
-          <section className="tool-pane">
-            <textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} spellCheck />
-          </section>
-        )}
-
-        {activeTab === "tasks" && (
-          <section className="tool-pane">
-            <form
-              className="task-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                addTask();
-              }}
-            >
-              <input value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="New task" />
-              <button type="submit" aria-label="Add task">
-                <Plus size={17} />
-              </button>
-            </form>
-            <div className="task-list">
-              {tasks.map((task) => (
-                <div className={`task-row ${task.done ? "done" : ""}`} key={task.id}>
-                  <button
-                    type="button"
-                    className="check-button"
-                    onClick={() =>
-                      setTasks((current) =>
-                        current.map((item) => (item.id === task.id ? { ...item, done: !item.done } : item))
-                      )
-                    }
-                    aria-label={task.done ? "Mark incomplete" : "Mark complete"}
-                  >
-                    {task.done ? <Check size={15} /> : <Circle size={15} />}
-                  </button>
-                  <span>{task.text}</span>
-                  <button type="button" className="trash-button" onClick={() => removeTask(task.id)} aria-label="Remove task">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {activeTab === "timer" && (
-          <section className="tool-pane timer-pane">
-            <div className="timer-ring" style={{ ["--timer-progress" as string]: timerProgress }}>
-              <span>{formatTimer(timerSeconds)}</span>
-            </div>
-            <div className="timer-actions">
-              <button type="button" onClick={onTimerToggle}>
-                {timerRunning ? <Pause size={17} /> : <Play size={17} />}
-                {timerRunning ? "Pause" : "Start"}
-              </button>
-              <button type="button" onClick={onTimerReset}>
-                <TimerReset size={17} />
-                Reset
-              </button>
-            </div>
-          </section>
-        )}
-
-        {activeTab === "stats" && (
-          <section className="tool-pane stats-grid">
-            <Metric icon={<Keyboard size={18} />} label="Keys" value={stats.keys.toLocaleString()} />
-            <Metric icon={<Clock3 size={18} />} label="Active" value={formatDuration(stats.activeSeconds)} />
-            <Metric icon={<ListTodo size={18} />} label="Tasks" value={`${tasks.filter((task) => task.done).length}/${tasks.length}`} />
-            <Metric icon={<Sparkles size={18} />} label="Launches" value={String(stats.launches)} />
-          </section>
-        )}
-      </div>
-    </aside>
-  );
-}
-
-function TabButton({ active, label, onClick, children }: IconButtonProps) {
-  return (
-    <button type="button" className={`tab-button ${active ? "active" : ""}`} onClick={onClick} aria-label={label}>
-      {children}
-      <span>{label}</span>
-    </button>
-  );
-}
-
 interface IconButtonProps {
   active?: boolean;
   label: string;
@@ -684,32 +552,6 @@ function IconButton({ active = false, label, tone = "default", onClick, children
       {children}
     </button>
   );
-}
-
-function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="metric">
-      <span>{icon}</span>
-      <strong>{value}</strong>
-      <small>{label}</small>
-    </div>
-  );
-}
-
-function formatTimer(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remaining = seconds % 60;
-  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
-}
-
-function formatDuration(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remaining = seconds % 60;
-  if (minutes < 60) {
-    return `${minutes}m ${remaining}s`;
-  }
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
 }
 
 export default App;

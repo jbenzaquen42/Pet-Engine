@@ -32,7 +32,7 @@
 - [x] Task 3: App State Wiring and Summon/Hide Flow
 - [x] Task 4: Authored Martyn and Charles Avatars
 - [x] Task 5: Companion Tray, Stage, and Command Components
-- [ ] Task 6: Tool Drawer Extraction and Click-Through Desktop Recovery
+- [x] Task 6: Tool Drawer Extraction and Click-Through Desktop Recovery
 - [ ] Task 7: Visual QA, Tuning, and Final Verification
 
 Update this checklist as each task passes task review and is recorded in `.superpowers/sdd/progress.md`.
@@ -1921,7 +1921,7 @@ git commit -m "feat: add companion tray and command UI"
 - Produces: `ToolDrawer` component.
 - Produces: `window.petEngine.onClickThroughChanged(callback: (enabled: boolean) => void): () => void`.
 
-- [ ] **Step 1: Move `ToolDrawer` and supporting drawer helpers**
+- [x] **Step 1: Move `ToolDrawer` and supporting drawer helpers**
 
 Create `src/components/ToolDrawer.tsx`:
 
@@ -2131,7 +2131,7 @@ function formatDuration(seconds: number) {
 
 Keep the JSX and class names unchanged so existing CSS still applies.
 
-- [ ] **Step 2: Import `ToolDrawer` and `ToolTab` in `App.tsx`**
+- [x] **Step 2: Import `ToolDrawer` and `ToolTab` in `App.tsx`**
 
 Add:
 
@@ -2141,7 +2141,7 @@ import { ToolDrawer, type ToolTab } from "./components/ToolDrawer";
 
 Delete the moved drawer definitions from `App.tsx`.
 
-- [ ] **Step 3: Add renderer click-through recovery typing**
+- [x] **Step 3: Add renderer click-through recovery typing**
 
 Modify `src/vite-env.d.ts`:
 
@@ -2158,7 +2158,7 @@ interface Window {
 }
 ```
 
-- [ ] **Step 4: Wire click-through setting in `App.tsx`**
+- [x] **Step 4: Wire click-through setting in `App.tsx`**
 
 Add this effect near the desktop mode effects:
 
@@ -2186,7 +2186,7 @@ useEffect(() => {
 }, [updateSettings]);
 ```
 
-- [ ] **Step 5: Reset click-through on launch**
+- [x] **Step 5: Reset click-through on launch**
 
 In the initial settings normalization path inside `App.tsx`, add this launch-only reset:
 
@@ -2198,7 +2198,7 @@ useEffect(() => {
 
 This guarantees persisted `clickThrough: true` cannot trap the user after restart.
 
-- [ ] **Step 6: Add Electron global shortcut recovery**
+- [x] **Step 6: Add Electron global shortcut recovery**
 
 Modify `electron/main.cjs`:
 
@@ -2259,7 +2259,7 @@ mainWindow.setIgnoreMouseEvents(false);
 mainWindow.setFocusable(true);
 ```
 
-- [ ] **Step 7: Expose click-through recovery in preload**
+- [x] **Step 7: Expose click-through recovery in preload**
 
 Modify `electron/preload.cjs`:
 
@@ -2280,7 +2280,7 @@ contextBridge.exposeInMainWorld("petEngine", {
 });
 ```
 
-- [ ] **Step 8: Improve desktop-mode chrome recovery styling**
+- [x] **Step 8: Improve desktop-mode chrome recovery styling**
 
 In `src/styles.css`, add:
 
@@ -2305,7 +2305,7 @@ In `src/styles.css`, add:
 }
 ```
 
-- [ ] **Step 9: Run tests and build**
+- [x] **Step 9: Run tests and build**
 
 Run:
 
@@ -2316,7 +2316,7 @@ npm run build
 
 Expected: all tests PASS and build PASS.
 
-- [ ] **Step 10: Commit Task 6**
+- [x] **Step 10: Commit Task 6**
 
 Run:
 

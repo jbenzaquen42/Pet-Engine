@@ -856,7 +856,7 @@ textarea {
 .desktop-mode .stage-header,
 .desktop-mode .behavior-bar,
 .desktop-mode .panel-toggle {
-  opacity: 0.08;
+  opacity: 0.04;
   transition: opacity 160ms ease;
 }
 
@@ -865,7 +865,13 @@ textarea {
 .desktop-mode .tool-drawer:hover,
 .desktop-mode .stage-header:hover,
 .desktop-mode .behavior-bar:hover,
-.desktop-mode .panel-toggle:hover {
+.desktop-mode .panel-toggle:hover,
+.desktop-mode:focus-within .top-bar,
+.desktop-mode:focus-within .companion-tray,
+.desktop-mode:focus-within .tool-drawer,
+.desktop-mode:focus-within .stage-header,
+.desktop-mode:focus-within .behavior-bar,
+.desktop-mode:focus-within .panel-toggle {
   opacity: 1;
 }
 
