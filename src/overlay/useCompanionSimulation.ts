@@ -9,6 +9,7 @@ import {
   getGroundY,
   getPetSize,
   reconcileRuntime,
+  separateOverlaps,
   type FollowContext
 } from "../behaviorEngine";
 import type { Behavior, EngineSettings, PetProfile, PetRuntime } from "../types";
@@ -58,7 +59,7 @@ export function useCompanionSimulation({
         // Ambient interactions run first (skipped while following the cursor).
         const withNeighbors = follow.active ? current : applyNeighbors(current, companions, bounds, now);
         const seeded = follow.active ? withNeighbors : applyFountain(withNeighbors, companions, settings, bounds, now);
-        return seeded.map((petRuntime) => {
+        const advanced = seeded.map((petRuntime) => {
           if (dragRef.current?.id === petRuntime.id) {
             return petRuntime;
           }
@@ -66,8 +67,11 @@ export function useCompanionSimulation({
           if (!pet) {
             return petRuntime;
           }
-          return advanceCompanion(petRuntime, pet, settings, bounds, delta, now, Math.random, follow);
+          const targetIndex = companions.findIndex((companion) => companion.id === petRuntime.id);
+          const petFollow = follow.active ? { ...follow, targetIndex } : follow;
+          return advanceCompanion(petRuntime, pet, settings, bounds, delta, now, Math.random, petFollow);
         });
+        return follow.active ? separateOverlaps(advanced, companions, settings, bounds) : advanced;
       });
       frame = requestAnimationFrame(tick);
     };

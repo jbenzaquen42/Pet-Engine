@@ -121,7 +121,7 @@ export function Overlay() {
         dragPet(event.clientX, event.clientY);
         return;
       }
-      const over = findPetAtPoint({ x: event.clientX, y: event.clientY }, boxesRef.current) !== null;
+      const over = findPetAtPoint({ x: event.clientX, y: event.clientY }, boxesRef.current, 14) !== null;
       if (over !== interactiveRef.current) {
         interactiveRef.current = over;
         window.petEngine?.setOverlayInteractive(over);

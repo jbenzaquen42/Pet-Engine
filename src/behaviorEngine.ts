@@ -10,11 +10,20 @@ export interface FollowContext {
   pounce: boolean;
   cursor: { x: number; y: number } | null;
   cursorIdleMs: number;
+  targetIndex?: number;
 }
 
 const IDLE_FOLLOW: FollowContext = { active: false, pounce: false, cursor: null, cursorIdleMs: 0 };
 
 const BASE_PET_SIZE = 150;
+const FOLLOW_SLOTS = [
+  { x: -0.75, y: -0.35 },
+  { x: 0.75, y: -0.35 },
+  { x: -0.75, y: 0.55 },
+  { x: 0.75, y: 0.55 },
+  { x: 0, y: -1.1 },
+  { x: 0, y: 1.05 }
+] as const;
 
 export function createInitialRuntime(pets: PetProfile[], bounds: StageBounds = { width: 900, height: 520 }): PetRuntime[] {
   const now = performance.now();
@@ -376,6 +385,58 @@ export function getGroundY(pet: PetProfile, settings: EngineSettings, height: nu
   return Math.max(72, height - getPetSize(pet, settings) * 0.82 - 28);
 }
 
+export function getFollowTarget(
+  cursor: { x: number; y: number },
+  index: number,
+  size: number,
+  bounds: StageBounds
+) {
+  const ring = Math.floor(index / FOLLOW_SLOTS.length);
+  const slot = FOLLOW_SLOTS[index % FOLLOW_SLOTS.length];
+  const distance = size * (0.72 + ring * 0.45);
+  const x = clamp(cursor.x - size / 2 + slot.x * distance, 8, Math.max(8, bounds.width - size - 8));
+  const y = clamp(cursor.y - size / 2 + slot.y * distance, 16, Math.max(16, bounds.height - size - 16));
+  return { x, y };
+}
+
+export function separateOverlaps(
+  runtimes: PetRuntime[],
+  pets: PetProfile[],
+  settings: EngineSettings,
+  bounds: StageBounds
+) {
+  const petById = new Map(pets.map((pet) => [pet.id, pet]));
+  const next = runtimes.map((runtime) => ({ ...runtime }));
+
+  for (let i = 0; i < next.length; i += 1) {
+    for (let j = i + 1; j < next.length; j += 1) {
+      const aPet = petById.get(next[i].id);
+      const bPet = petById.get(next[j].id);
+      if (!aPet || !bPet) {
+        continue;
+      }
+      const aSize = getPetSize(aPet, settings);
+      const bSize = getPetSize(bPet, settings);
+      const minDist = (aSize + bSize) * 0.34;
+      const dx = next[j].x - next[i].x;
+      const dy = next[j].y - next[i].y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      if (dist >= minDist) {
+        continue;
+      }
+      const push = (minDist - dist) / 2;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      next[i].x = clamp(next[i].x - ux * push, 8, Math.max(8, bounds.width - aSize - 8));
+      next[i].y = clamp(next[i].y - uy * push, 16, Math.max(16, bounds.height - aSize - 16));
+      next[j].x = clamp(next[j].x + ux * push, 8, Math.max(8, bounds.width - bSize - 8));
+      next[j].y = clamp(next[j].y + uy * push, 16, Math.max(16, bounds.height - bSize - 16));
+    }
+  }
+
+  return next;
+}
+
 function chooseWeightedBehavior(pet: PetProfile, random: () => number): Behavior {
   const choices: Array<[Behavior, number]> = [
     ["idle", pet.personality.idleWeight],
@@ -411,46 +472,56 @@ function applyFollow(
   size: number
 ): PetRuntime {
   const cursor = follow.cursor!;
-  const target = clamp(cursor.x - size / 2, 8, maxX);
-  const dx = target - next.x;
-  const dist = Math.abs(dx);
-  const arrive = Math.max(28, size * 0.5);
+  const target = getFollowTarget(cursor, follow.targetIndex ?? 0, size, _bounds);
+  const dx = target.x - next.x;
+  const dy = target.y - next.y;
+  const dist = Math.hypot(dx, dy);
+  const arrive = Math.max(30, size * 0.28);
   const canPounce = follow.pounce && pet.species === "cat";
   const elapsed = now - next.stateStartedAt;
 
   // Pounce state machine: crouch (stalk) then leap (pounce), then watch again.
   if (next.behavior === "stalk") {
     if (elapsed > 620) {
-      return { ...next, y: ground, behavior: "pounce", stateStartedAt: now };
+      return { ...next, y: target.y, behavior: "pounce", stateStartedAt: now };
     }
-    return { ...next, y: ground };
+    return { ...next, y: target.y };
   }
   if (next.behavior === "pounce") {
     const progress = Math.min(1, elapsed / 380);
-    const y = ground - Math.sin(progress * Math.PI) * (34 + pet.energy * 26);
+    const y = target.y - Math.sin(progress * Math.PI) * (34 + pet.energy * 26);
     const x = clamp(next.x + dx * 0.16, 8, maxX);
     if (progress >= 1) {
-      return { ...next, x, y: ground, behavior: "watch", stateStartedAt: now };
+      return { ...next, x, y: target.y, behavior: "watch", stateStartedAt: now };
     }
     return { ...next, x, y };
   }
 
+  if (canPounce && follow.cursorIdleMs > 1400 && dist <= Math.max(arrive, size * 0.72)) {
+    return { ...next, y: target.y, direction: dx >= 0 ? 1 : -1, behavior: "stalk", stateStartedAt: now };
+  }
+
   if (dist > arrive) {
-    const step = Math.min(dist, (0.9 + pet.speed * 1.3) * settings.globalSpeed * (delta / 16.67));
+    const step = Math.min(dist, (1.2 + pet.speed * 1.7) * settings.globalSpeed * (delta / 16.67));
     const direction: 1 | -1 = dx >= 0 ? 1 : -1;
     const behavior: Behavior = dist > 320 ? "chase" : "walk";
     const stateStartedAt = next.behavior === behavior ? next.stateStartedAt : now;
-    return { ...next, x: clamp(next.x + step * direction, 8, maxX), y: ground, direction, behavior, stateStartedAt };
+    const ratio = dist === 0 ? 0 : step / dist;
+    return {
+      ...next,
+      x: clamp(next.x + dx * ratio, 8, maxX),
+      y: clamp(next.y + dy * ratio, 16, Math.max(16, _bounds.height - size - 16)),
+      direction,
+      behavior,
+      stateStartedAt
+    };
   }
 
   // Arrived: face the cursor. Cats pounce once the cursor has held still a beat.
   const direction: 1 | -1 = dx >= 0 ? 1 : -1;
-  if (canPounce && follow.cursorIdleMs > 1400) {
-    return { ...next, y: ground, direction, behavior: "stalk", stateStartedAt: now };
-  }
   return {
     ...next,
-    y: ground,
+    y: target.y,
     direction,
     behavior: "watch",
     stateStartedAt: next.behavior === "watch" ? next.stateStartedAt : now
