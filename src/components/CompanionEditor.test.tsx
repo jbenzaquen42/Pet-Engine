@@ -31,5 +31,8 @@ describe("CompanionEditor", () => {
 
     expect(markup).toContain("2 selected");
     expect(markup).toContain("Mixed");
+    expect(markup).toContain('value="1.025"');
+    expect(markup).toContain('value="0.6"');
+    expect(markup).toContain('value="0.525"');
   });
 });

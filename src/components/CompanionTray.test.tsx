@@ -38,4 +38,20 @@ describe("CompanionTray", () => {
     expect(markup).toContain("Edit Charles");
     expect(markup).toContain("2 selected");
   });
+
+  it("renders a bulk control to hide catalog companions only", () => {
+    const markup = renderToStaticMarkup(
+      <CompanionTray
+        companions={initialCompanionState.companions}
+        focusedPetId="martyn"
+        selectedPetIds={["martyn"]}
+        onFocus={() => undefined}
+        onSelectionChange={() => undefined}
+        onToggleSummoned={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("Hide catalog pets");
+    expect(markup).not.toContain("Hide all companions");
+  });
 });

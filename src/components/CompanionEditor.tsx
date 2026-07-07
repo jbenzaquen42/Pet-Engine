@@ -13,6 +13,10 @@ const fields = [
   { key: "energy", label: "Energy", min: 0.05, max: 1, step: 0.01 }
 ] as const;
 
+function getFieldMidpoint(min: number, max: number) {
+  return (min + max) / 2;
+}
+
 export function CompanionEditor({ companions, selectedPetIds, onUpdateSelected }: CompanionEditorProps) {
   const selected = companions.filter((pet) => selectedPetIds.includes(pet.id));
   if (selected.length === 0) {
@@ -34,7 +38,7 @@ export function CompanionEditor({ companions, selectedPetIds, onUpdateSelected }
       <div className="editor-fields">
         {fields.map((field) => {
           const value = getSharedNumberValue(companions, selectedPetIds, field.key);
-          const numeric = typeof value === "number" ? value : Number(field.min);
+          const numeric = typeof value === "number" ? value : getFieldMidpoint(field.min, field.max);
           return (
             <label className="range-field" key={field.key}>
               <span>

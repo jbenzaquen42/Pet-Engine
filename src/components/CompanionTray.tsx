@@ -130,6 +130,14 @@ export function CompanionTray({
           ))}
         </div>
       </section>
+
+      <button
+        className="clear-catalog"
+        type="button"
+        onClick={() => catalog.forEach((pet) => onToggleSummoned(pet.id, false))}
+      >
+        Hide catalog pets
+      </button>
     </aside>
   );
 }

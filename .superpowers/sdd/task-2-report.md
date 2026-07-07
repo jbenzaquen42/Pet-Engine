@@ -65,3 +65,41 @@ Result:
 ## Concerns
 
 - The focused task tests pass, but the Vitest output includes pre-existing Vite deprecation warnings unrelated to this task.
+
+## Review Fixes
+
+### Findings Addressed
+
+- Restored a bulk `Hide catalog pets` control in `src/components/CompanionTray.tsx` so catalog companions can be hidden together without affecting authored built-ins.
+- Updated mixed-selection slider fallbacks in `src/components/CompanionEditor.tsx` to use each field's midpoint instead of the minimum value while continuing to display `Mixed`.
+- Extended tray/editor tests to cover the restored bulk control and midpoint slider rendering.
+
+### Fix TDD Evidence
+
+#### RED
+
+Command:
+
+```bash
+npx vitest run src/components/CompanionTray.test.tsx src/components/CompanionEditor.test.tsx src/companionState.test.ts
+```
+
+Result:
+
+- Failed as expected.
+- `CompanionTray.test.tsx` failed because the tray no longer rendered `Hide catalog pets`.
+- `CompanionEditor.test.tsx` failed because mixed range inputs still rendered the field minimums instead of midpoint values.
+
+#### GREEN
+
+Command:
+
+```bash
+npx vitest run src/components/CompanionTray.test.tsx src/components/CompanionEditor.test.tsx src/companionState.test.ts
+```
+
+Result:
+
+- Passed: `3` files, `13` tests.
+- Exit code `0`.
+- The same pre-existing Vite deprecation warnings were emitted during the run.

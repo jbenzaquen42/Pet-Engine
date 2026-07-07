@@ -306,6 +306,21 @@ button {
   border-top: 1px solid var(--line);
 }
 
+.clear-catalog {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 760;
+}
+
 .companion-editor {
   display: grid;
   gap: 12px;
