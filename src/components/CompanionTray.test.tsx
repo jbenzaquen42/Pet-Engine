@@ -4,35 +4,51 @@ import { initialCompanionState } from "../data";
 import { CompanionTray } from "./CompanionTray";
 
 describe("CompanionTray", () => {
-  it("renders locked custom cats without editor controls", () => {
+  it("renders summon controls for authored and catalog companions", () => {
     const markup = renderToStaticMarkup(
       <CompanionTray
         companions={initialCompanionState.companions}
-        selectedPetId="martyn"
-        onSelect={() => undefined}
+        focusedPetId="martyn"
+        onFocus={() => undefined}
         onToggleSummoned={() => undefined}
+        onHideAll={() => undefined}
       />
     );
 
-    expect(markup).toContain("Martyn");
-    expect(markup).toContain("Charles");
-    expect(markup).toContain("Locked");
-    expect(markup).not.toContain("<input");
-    expect(markup).not.toContain("<select");
+    expect(markup).toContain("Hide Martyn");
+    expect(markup).toContain("Hide Charles");
+    expect(markup).toContain("Summon Bag");
+    expect(markup).not.toContain("Locked");
   });
 
-  it("renders catalog summon controls", () => {
+  it("gives each pet an edit affordance instead of checkboxes", () => {
     const markup = renderToStaticMarkup(
       <CompanionTray
         companions={initialCompanionState.companions}
-        selectedPetId="martyn"
-        onSelect={() => undefined}
+        focusedPetId="martyn"
+        onFocus={() => undefined}
         onToggleSummoned={() => undefined}
+        onHideAll={() => undefined}
       />
     );
 
-    expect(markup).toContain("Original-style catalog");
-    expect(markup).toContain("Summon Bag");
-    expect(markup).toContain("Summon Patch");
+    expect(markup).toContain("Edit Martyn");
+    expect(markup).toContain("Edit Charles");
+    expect(markup).not.toContain('type="checkbox"');
+  });
+
+  it("renders bulk controls to hide catalog pets and turn all off", () => {
+    const markup = renderToStaticMarkup(
+      <CompanionTray
+        companions={initialCompanionState.companions}
+        focusedPetId="martyn"
+        onFocus={() => undefined}
+        onToggleSummoned={() => undefined}
+        onHideAll={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("Hide catalog pets");
+    expect(markup).toContain("All off");
   });
 });

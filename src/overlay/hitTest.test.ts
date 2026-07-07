@@ -23,4 +23,9 @@ describe("findPetAtPoint", () => {
     expect(findPetAtPoint({ x: 0, y: 0 }, boxes)).toBe("martyn");
     expect(findPetAtPoint({ x: 100, y: 0 }, boxes)).toBe("martyn");
   });
+
+  it("supports padded hit boxes", () => {
+    expect(findPetAtPoint({ x: -8, y: 10 }, boxes, 10)).toBe("martyn");
+    expect(findPetAtPoint({ x: -20, y: 10 }, boxes, 10)).toBeNull();
+  });
 });

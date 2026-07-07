@@ -11,11 +11,14 @@ export interface PetBox {
   height: number;
 }
 
-export function findPetAtPoint(point: Point, boxes: PetBox[]): string | null {
+export function findPetAtPoint(point: Point, boxes: PetBox[], padding = 0): string | null {
   for (let index = boxes.length - 1; index >= 0; index -= 1) {
     const box = boxes[index];
     const inside =
-      point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height;
+      point.x >= box.x - padding &&
+      point.x <= box.x + box.width + padding &&
+      point.y >= box.y - padding &&
+      point.y <= box.y + box.height + padding;
     if (inside) {
       return box.id;
     }

@@ -1,12 +1,13 @@
 /// <reference types="vite/client" />
 
 import type { OverlaySnapshot } from "./shared/overlayBridge";
-import type { Behavior } from "./types";
+import type { Behavior, PopoutTab } from "./types";
 
 export interface OverlayCommand {
   behavior: Behavior;
   target: "selected" | "all";
   id?: string;
+  hold?: boolean;
 }
 
 declare global {
@@ -26,6 +27,7 @@ declare global {
       pushCommand: (command: OverlayCommand) => void;
       onCommand: (callback: (command: OverlayCommand) => void) => () => void;
       onTrayToggleFollow: (callback: (enabled: boolean) => void) => () => void;
+      openPopout?: (tab: PopoutTab) => void;
     };
   }
 }

@@ -7,6 +7,7 @@ let panelWindow;
 let tray;
 let cursorTimer = null;
 let latestSnapshot = { companions: [], settings: {} };
+const popoutWindows = new Map();
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 
@@ -43,9 +44,112 @@ function loadPage(win, page) {
   }
 }
 
+function loadPopout(win, tab) {
+  if (isDev) {
+    win.loadURL(`${process.env.VITE_DEV_SERVER_URL}/index.html?popout=${tab}`);
+  } else {
+    win.loadFile(path.join(__dirname, "..", "dist", "index.html"), { search: `popout=${tab}` });
+  }
+}
+
+function popoutBoundsPath(tab) {
+  return path.join(app.getPath("userData"), `popout-${tab}.json`);
+}
+
+// A tool pop-out is a standalone frameless window: it can be dragged to any
+// display and stays open when the main panel is minimized/hidden to the tray.
+function openPopout(tab) {
+  const existing = popoutWindows.get(tab);
+  if (existing && !existing.isDestroyed()) {
+    existing.show();
+    existing.focus();
+    return;
+  }
+
+  let saved = null;
+  try {
+    saved = JSON.parse(fs.readFileSync(popoutBoundsPath(tab), "utf-8"));
+  } catch {
+    saved = null;
+  }
+
+  const win = new BrowserWindow({
+    width: saved?.width ?? 300,
+    height: saved?.height ?? 400,
+    x: saved?.x,
+    y: saved?.y,
+    icon: iconPath,
+    minWidth: 240,
+    minHeight: 260,
+    frame: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    hasShadow: true,
+    resizable: true,
+    skipTaskbar: false,
+    title: `Pet Engine — ${tab}`,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  win.setAlwaysOnTop(true, "floating");
+  loadPopout(win, tab);
+
+  const persist = () => {
+    try {
+      fs.writeFileSync(popoutBoundsPath(tab), JSON.stringify(win.getBounds()));
+    } catch {
+      // Pop-out position memory is a convenience; ignore write failures.
+    }
+  };
+  win.on("moved", persist);
+  win.on("resized", persist);
+  win.on("closed", () => popoutWindows.delete(tab));
+
+  popoutWindows.set(tab, win);
+}
+
+// Union of connected displays so companions can roam across all screens.
+// A single transparent always-on-top window spanning a DPI boundary is a
+// known Electron/Chromium-on-Windows compositor bug: the window (and, since
+// windows share a GPU process, sibling windows too) can render blank or
+// flicker. So we only span displays that share the primary's scale factor;
+// a mismatched-DPI secondary monitor is left out rather than corrupting
+// everything.
+function getOverlayBounds() {
+  const displays = screen.getAllDisplays();
+  const primaryScale = screen.getPrimaryDisplay().scaleFactor;
+  const compatible = displays.filter((display) => display.scaleFactor === primaryScale);
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const display of compatible) {
+    const b = display.workArea;
+    minX = Math.min(minX, b.x);
+    minY = Math.min(minY, b.y);
+    maxX = Math.max(maxX, b.x + b.width);
+    maxY = Math.max(maxY, b.y + b.height);
+  }
+  if (!Number.isFinite(minX)) {
+    const primary = screen.getPrimaryDisplay().workArea;
+    return { x: primary.x, y: primary.y, width: primary.width, height: primary.height };
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+function updateOverlayBounds() {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.setBounds(getOverlayBounds());
+  }
+}
+
 function createOverlayWindow() {
-  const primary = screen.getPrimaryDisplay();
-  const { x, y, width, height } = primary.workArea;
+  const { x, y, width, height } = getOverlayBounds();
 
   overlayWindow = new BrowserWindow({
     x,
@@ -165,6 +269,13 @@ app.whenReady().then(() => {
   createPanelWindow();
   createTray();
 
+  // Keep the overlay spanning every compatible screen as monitors are
+  // plugged/unplugged. display-metrics-changed is intentionally not watched
+  // here: it can fire as a side effect of resizing a window near a DPI
+  // boundary, which would otherwise retrigger setBounds in a loop.
+  screen.on("display-added", updateOverlayBounds);
+  screen.on("display-removed", updateOverlayBounds);
+
   globalShortcut.register("Control+Alt+P", () => {
     showPanel();
   });
@@ -226,6 +337,13 @@ ipcMain.on("follow:set", (_event, active) => {
     startCursorPump();
   } else {
     stopCursorPump();
+  }
+});
+
+// Panel -> main: open a tool in its own pop-out window.
+ipcMain.on("popout:open", (_event, tab) => {
+  if (tab === "notes" || tab === "tasks" || tab === "timer") {
+    openPopout(tab);
   }
 });
 

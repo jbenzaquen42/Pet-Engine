@@ -1,4 +1,4 @@
-import { ListTodo, Minus, PanelRightClose, PanelRightOpen, Pin, Sparkles, X } from "lucide-react";
+import { Check, Circle, ListTodo, Minus, PanelRightClose, PanelRightOpen, Pin, Plus, Sparkles, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { initialCompanionState, initialSettings, initialTasks } from "./data";
@@ -6,23 +6,19 @@ import {
   findSelectedCompanion,
   getSummonedCompanions,
   normalizeCompanionState,
+  updateCompanionsByIds,
   setCompanionSummoned
 } from "./companionState";
 import { CommandBar } from "./components/CommandBar";
+import { CompanionEditor } from "./components/CompanionEditor";
 import { CompanionTray } from "./components/CompanionTray";
+import { getTimerProgress, TimerTool } from "./components/TimerTool";
 import { ToolDrawer, type ToolTab } from "./components/ToolDrawer";
+import { ToolPopout } from "./components/ToolPopout";
 import { uid, useLocalStorageState } from "./storage";
-import type { EngineSettings, PetProfile, TaskItem } from "./types";
+import { STORAGE_KEYS } from "./storageKeys";
+import type { Behavior, EngineSettings, PetProfile, TaskItem } from "./types";
 import type { OverlaySnapshot } from "./shared/overlayBridge";
-
-const STORAGE_KEYS = {
-  companions: "personal-pet-engine:companions:v2",
-  settings: "personal-pet-engine:settings",
-  notes: "personal-pet-engine:notes",
-  tasks: "personal-pet-engine:tasks",
-  stats: "personal-pet-engine:stats",
-  firstRun: "personal-pet-engine:first-run-seen"
-};
 
 
 interface StatsState {
@@ -61,15 +57,18 @@ function App() {
   const [notes, setNotes] = useLocalStorageState(STORAGE_KEYS.notes, "Today feels lighter with company on the desktop.");
   const [tasks, setTasks] = useLocalStorageState<TaskItem[]>(STORAGE_KEYS.tasks, initialTasks);
   const [stats, setStats] = useLocalStorageState<StatsState>(STORAGE_KEYS.stats, initialStats);
-  const [selectedPetId, setSelectedPetId] = useState(() => summonedCompanions[0]?.id ?? "martyn");
+  const [focusedPetId, setFocusedPetId] = useState(() => summonedCompanions[0]?.id ?? "martyn");
+  const [heldBehavior, setHeldBehavior] = useState<Behavior | null>(null);
   const [toolTab, setToolTab] = useState<ToolTab>("notes");
   const [newTask, setNewTask] = useState("");
+  const [timerMinutes, setTimerMinutes] = useState(25);
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [poppedTools, setPoppedTools] = useState<ToolTab[]>([]);
   const [firstRunSeen, setFirstRunSeen] = useLocalStorageState<boolean>(STORAGE_KEYS.firstRun, false);
   const showFirstRun = !firstRunSeen;
 
-  const selectedPet = findSelectedCompanion(companions, selectedPetId);
+  const selectedPet = findSelectedCompanion(companions, focusedPetId);
 
   const updateSettings = useCallback(
     (patch: Partial<EngineSettings>) => {
@@ -83,10 +82,10 @@ function App() {
   }, [setStats]);
 
   useEffect(() => {
-    if (!summonedCompanions.some((pet) => pet.id === selectedPetId) && summonedCompanions[0]) {
-      setSelectedPetId(summonedCompanions[0].id);
+    if (!summonedCompanions.some((pet) => pet.id === focusedPetId) && summonedCompanions[0]) {
+      setFocusedPetId(summonedCompanions[0].id);
     }
-  }, [summonedCompanions, selectedPetId]);
+  }, [focusedPetId, summonedCompanions]);
 
   useEffect(() => {
     if (!window.petEngine) {
@@ -170,7 +169,7 @@ function App() {
   }, [timerRunning]);
 
   const completedTasks = tasks.filter((task) => task.done).length;
-  const timerProgress = 1 - timerSeconds / (25 * 60);
+  const timerProgress = getTimerProgress(timerSeconds, timerMinutes);
 
 
   const updateCompanions = useCallback(
@@ -187,10 +186,49 @@ function App() {
     (id: string, summoned: boolean) => {
       updateCompanions((current) => setCompanionSummoned(current, id, summoned));
       if (summoned) {
-        setSelectedPetId(id);
+        setFocusedPetId(id);
       }
     },
     [updateCompanions]
+  );
+
+  const hideAllCompanions = useCallback(() => {
+    updateCompanions((current) => current.map((pet) => (pet.summoned ? { ...pet, summoned: false } : pet)));
+  }, [updateCompanions]);
+
+  const updatePet = useCallback(
+    (id: string, patch: Partial<PetProfile>) => {
+      setCompanionState((current) => ({
+        ...current,
+        companions: updateCompanionsByIds(current.companions, [id], patch)
+      }));
+    },
+    [setCompanionState]
+  );
+
+  const pushCommand = useCallback(
+    (behavior: Behavior, target: "selected" | "all", hold = false) => {
+      window.petEngine?.pushCommand({
+        behavior,
+        target,
+        id: target === "selected" ? focusedPetId : undefined,
+        hold
+      });
+    },
+    [focusedPetId]
+  );
+
+  // Mode buttons lock every summoned pet into one action; Auto (null) releases them.
+  const setHeld = useCallback(
+    (behavior: Behavior | null) => {
+      setHeldBehavior(behavior);
+      if (behavior) {
+        pushCommand(behavior, "all", true);
+      } else {
+        pushCommand("idle", "all", false);
+      }
+    },
+    [pushCommand]
   );
 
   const addTask = useCallback(() => {
@@ -209,6 +247,47 @@ function App() {
     },
     [setTasks]
   );
+
+  const popTool = useCallback((tab: ToolTab) => {
+    // Prefer a real OS window (roams across screens, survives minimizing the
+    // panel). Fall back to an in-panel floating card outside Electron.
+    if (window.petEngine?.openPopout && tab !== "stats") {
+      window.petEngine.openPopout(tab);
+      return;
+    }
+    setPoppedTools((current) => (current.includes(tab) ? current : [...current, tab]));
+  }, []);
+
+  const closePoppedTool = useCallback((tab: ToolTab) => {
+    setPoppedTools((current) => current.filter((item) => item !== tab));
+  }, []);
+
+  const updateTimerMinutes = useCallback((minutes: number) => {
+    const bounded = Math.min(180, Math.max(1, minutes));
+    setTimerMinutes(bounded);
+    setTimerRunning(false);
+    setTimerSeconds(bounded * 60);
+  }, []);
+
+  const toggleTaskDone = useCallback(
+    (taskId: string) => {
+      setTasks((current) => current.map((item) => (item.id === taskId ? { ...item, done: !item.done } : item)));
+    },
+    [setTasks]
+  );
+
+  const timerActionProps = {
+    timerSeconds,
+    timerRunning,
+    timerProgress,
+    timerMinutes,
+    onTimerToggle: () => setTimerRunning((current) => !current),
+    onTimerReset: () => {
+      setTimerRunning(false);
+      setTimerSeconds(timerMinutes * 60);
+    },
+    onTimerMinutesChange: updateTimerMinutes
+  };
 
   return (
     <main className="app-shell">
@@ -231,24 +310,29 @@ function App() {
       <section className="workspace">
         <CompanionTray
           companions={companions}
-          selectedPetId={selectedPetId}
-          onSelect={setSelectedPetId}
+          focusedPetId={focusedPetId}
+          onFocus={setFocusedPetId}
           onToggleSummoned={toggleSummoned}
+          onHideAll={hideAllCompanions}
+        />
+
+        <CompanionEditor
+          pets={summonedCompanions}
+          focusedPetId={focusedPetId}
+          onFocus={setFocusedPetId}
+          onUpdatePet={updatePet}
         />
 
         <CommandBar
           selectedPet={selectedPet}
           settings={settings}
+          heldBehavior={heldBehavior}
           onSettingsChange={updateSettings}
-          onCommand={(behavior, target = "selected") =>
-            window.petEngine?.pushCommand({
-              behavior,
-              target,
-              id: target === "selected" ? selectedPetId : undefined
-            })
-          }
-          onCall={() => window.petEngine?.pushCommand({ behavior: "walk", target: "selected", id: selectedPetId })}
-          onReset={() => window.petEngine?.pushCommand({ behavior: "idle", target: "all" })}
+          onSetHeld={setHeld}
+          onAction={(behavior) => pushCommand(behavior, "selected", false)}
+          onGroupJump={() => pushCommand("jump", "all", false)}
+          onCall={() => pushCommand("come", "selected", false)}
+          onReset={() => setHeld(null)}
         />
 
         <div className="tools-region">
@@ -280,19 +364,81 @@ function App() {
               timerSeconds={timerSeconds}
               timerRunning={timerRunning}
               timerProgress={timerProgress}
-              onTimerToggle={() => setTimerRunning((current) => !current)}
-              onTimerReset={() => {
-                setTimerRunning(false);
-                setTimerSeconds(25 * 60);
-              }}
+              poppedTools={poppedTools}
+              onPopTool={popTool}
+              timerMinutes={timerMinutes}
+              onTimerToggle={timerActionProps.onTimerToggle}
+              onTimerReset={timerActionProps.onTimerReset}
+              onTimerMinutesChange={updateTimerMinutes}
               stats={stats}
             />
           )}
         </div>
 
+        {poppedTools.map((tab, index) => (
+          <ToolPopout
+            key={tab}
+            title={getToolTitle(tab)}
+            onClose={() => closePoppedTool(tab)}
+            style={{ right: 18 + index * 20, bottom: 18 + index * 20 }}
+          >
+            {tab === "notes" && <textarea value={notes} onChange={(event) => setNotes(event.target.value)} spellCheck />}
+
+            {tab === "tasks" && (
+              <section className="tool-pane">
+                <form
+                  className="task-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    addTask();
+                  }}
+                >
+                  <input value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="New task" />
+                  <button type="submit" aria-label="Add task">
+                    <Plus size={17} />
+                  </button>
+                </form>
+                <div className="task-list">
+                  {tasks.map((task) => (
+                    <div className={`task-row ${task.done ? "done" : ""}`} key={task.id}>
+                      <button
+                        type="button"
+                        className="check-button"
+                        onClick={() => toggleTaskDone(task.id)}
+                        aria-label={task.done ? "Mark incomplete" : "Mark complete"}
+                      >
+                        {task.done ? <Check size={15} /> : <Circle size={15} />}
+                      </button>
+                      <span>{task.text}</span>
+                      <button type="button" className="trash-button" onClick={() => removeTask(task.id)} aria-label="Remove task">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {tab === "timer" && <TimerTool {...timerActionProps} />}
+          </ToolPopout>
+        ))}
+
       </section>
     </main>
   );
+}
+
+function getToolTitle(tab: ToolTab) {
+  switch (tab) {
+    case "notes":
+      return "Notes";
+    case "tasks":
+      return "Tasks";
+    case "timer":
+      return "Timer";
+    default:
+      return "Tool";
+  }
 }
 
 interface TopBarProps {

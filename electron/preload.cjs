@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld("petEngine", {
     return () => ipcRenderer.removeListener("cursor:update", listener);
   },
 
+  // Tool pop-out windows (own OS window, roam across screens, survive minimize)
+  openPopout: (tab) => ipcRenderer.send("popout:open", tab),
+
   // Behavior commands: panel -> overlay
   pushCommand: (command) => ipcRenderer.send("command:push", command),
   onCommand: (callback) => {

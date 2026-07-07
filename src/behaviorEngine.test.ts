@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 import { customCompanions, initialSettings } from "./data";
 import {
   advanceCompanion,
+  applyCuddle,
   applyFountain,
   applyNeighbors,
   commandRuntime,
   createInitialRuntime,
+  getFollowTarget,
   getGroundY,
   getPetSize,
-  reconcileRuntime
+  reconcileRuntime,
+  separateOverlaps
 } from "./behaviorEngine";
 import type { FollowContext } from "./behaviorEngine";
 import type { PetRuntime } from "./types";
@@ -104,7 +107,169 @@ describe("behavior engine", () => {
   });
 });
 
+describe("held behavior lock", () => {
+  it("commandRuntime marks the behavior as held when hold is requested", () => {
+    const locked = commandRuntime(runtimeFor("martyn"), "sit", 1000, true);
+    expect(locked.held).toBe(true);
+    const loose = commandRuntime(runtimeFor("martyn"), "sit", 1000);
+    expect(loose.held).toBeFalsy();
+  });
+
+  it("keeps a held walker patrolling instead of switching randomly", () => {
+    const next = advanceCompanion(
+      runtimeFor("charles", { behavior: "walk", x: 300, direction: 1, held: true, stateStartedAt: 0 }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      5000,
+      () => 0
+    );
+    expect(next.behavior).toBe("walk");
+    expect(next.x).toBeGreaterThan(300);
+  });
+
+  it("holds a held nap indefinitely", () => {
+    const next = advanceCompanion(
+      runtimeFor("martyn", { behavior: "sleep", held: true, stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      60000,
+      () => 0
+    );
+    expect(next.behavior).toBe("sleep");
+  });
+
+  it("releases the hold when commanded back to auto", () => {
+    const released = commandRuntime(runtimeFor("martyn", { held: true }), "idle", 1000, false);
+    expect(released.held).toBe(false);
+  });
+});
+
+describe("come to center", () => {
+  it("walks toward the target then greets on arrival", () => {
+    const walking = advanceCompanion(
+      runtimeFor("charles", { behavior: "come", x: 100, targetX: 500 }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0.5
+    );
+    expect(walking.behavior).toBe("come");
+    expect(walking.x).toBeGreaterThan(100);
+
+    const arrived = advanceCompanion(
+      runtimeFor("charles", { behavior: "come", x: 500, targetX: 500, stateStartedAt: 0 }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0.5
+    );
+    expect(arrived.behavior).toBe("greet");
+  });
+});
+
+describe("standalone pounce", () => {
+  it("crouches then leaps then settles without follow mode", () => {
+    const crouch = advanceCompanion(
+      runtimeFor("martyn", { behavior: "stalk", stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      600,
+      () => 0.5
+    );
+    expect(crouch.behavior).toBe("pounce");
+
+    const airborne = advanceCompanion(
+      runtimeFor("martyn", { behavior: "pounce", x: 200, direction: 1, stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5
+    );
+    expect(airborne.behavior).toBe("pounce");
+    expect(airborne.x).toBeGreaterThan(200);
+
+    const landed = advanceCompanion(
+      runtimeFor("martyn", { behavior: "pounce", x: 200, direction: 1, stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      500,
+      () => 0.5
+    );
+    expect(landed.behavior).toBe("idle");
+  });
+});
+
+describe("cuddle", () => {
+  it("sends one cat walking to the other when they are apart and resting", () => {
+    const result = applyCuddle(
+      [
+        runtimeFor("martyn", { x: 200, behavior: "idle", lastInteractionAt: 0 }),
+        runtimeFor("charles", { x: 600, behavior: "idle", lastInteractionAt: 0 })
+      ],
+      [martyn, charles],
+      bounds,
+      10000,
+      () => 0
+    );
+    const behaviors = result.map((runtime) => runtime.behavior);
+    expect(behaviors).toContain("come");
+  });
+
+  it("syncs both into a nap when they are already close and resting", () => {
+    const result = applyCuddle(
+      [
+        runtimeFor("martyn", { x: 300, behavior: "idle", lastInteractionAt: 0 }),
+        runtimeFor("charles", { x: 360, behavior: "idle", lastInteractionAt: 0 })
+      ],
+      [martyn, charles],
+      bounds,
+      10000,
+      () => 0
+    );
+    expect(result.map((runtime) => runtime.behavior)).toEqual(["sleep", "sleep"]);
+  });
+});
+
 describe("follow mode", () => {
+  it("does not jitter its position once inside the arrival deadzone", () => {
+    const size = getPetSize(charles, initialSettings);
+    const target = getFollowTarget({ x: 320, y: 300 }, 0, size, bounds);
+    const next = advanceCompanion(
+      runtimeFor("charles", { x: target.x + 4, y: target.y - 3, behavior: "watch", stateStartedAt: 0 }),
+      charles,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0.5,
+      { active: true, pounce: false, cursor: { x: 320, y: 300 }, cursorIdleMs: 0, targetIndex: 0 }
+    );
+    expect(next.x).toBe(target.x + 4);
+    expect(next.y).toBe(target.y - 3);
+  });
+
+
+  it("assigns separate follow slots around the cursor", () => {
+    const first = getFollowTarget({ x: 450, y: 260 }, 0, 120, bounds);
+    const second = getFollowTarget({ x: 450, y: 260 }, 1, 120, bounds);
+
+    expect(first).not.toEqual(second);
+  });
+
   it("walks toward a far cursor and faces it", () => {
     const next = advanceCompanion(
       runtimeFor("charles", { x: 100, behavior: "idle" }),
@@ -121,24 +286,42 @@ describe("follow mode", () => {
     expect(["walk", "chase"]).toContain(next.behavior);
   });
 
-  it("watches the cursor once it has arrived", () => {
+  it("follow mode moves toward cursor y as well as x", () => {
     const next = advanceCompanion(
-      runtimeFor("charles", { x: 300, behavior: "walk" }),
+      runtimeFor("martyn", { x: 100, y: 400, behavior: "idle" }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      1000,
+      () => 0.5,
+      { active: true, pounce: false, cursor: { x: 700, y: 120 }, cursorIdleMs: 0, targetIndex: 0 }
+    );
+
+    expect(next.x).toBeGreaterThan(100);
+    expect(next.y).toBeLessThan(400);
+  });
+
+  it("watches the cursor once it has arrived", () => {
+    const target = getFollowTarget({ x: 320, y: 300 }, 0, getPetSize(charles, initialSettings), bounds);
+    const next = advanceCompanion(
+      runtimeFor("charles", { x: target.x, y: target.y, behavior: "walk" }),
       charles,
       initialSettings,
       bounds,
       16.67,
       1000,
       () => 0.5,
-      { active: true, pounce: false, cursor: { x: 320, y: 300 }, cursorIdleMs: 0 }
+      { active: true, pounce: false, cursor: { x: 320, y: 300 }, cursorIdleMs: 0, targetIndex: 0 }
     );
     expect(next.behavior).toBe("watch");
   });
 
   it("makes a cat stalk then pounce when the cursor sits still nearby", () => {
-    const follow: FollowContext = { active: true, pounce: true, cursor: { x: 320, y: 300 }, cursorIdleMs: 1600 };
+    const follow: FollowContext = { active: true, pounce: true, cursor: { x: 320, y: 300 }, cursorIdleMs: 1600, targetIndex: 0 };
+    const target = getFollowTarget({ x: 320, y: 300 }, 0, getPetSize(martyn, initialSettings), bounds);
     const stalking = advanceCompanion(
-      runtimeFor("martyn", { x: 300, behavior: "watch", stateStartedAt: 0 }),
+      runtimeFor("martyn", { x: target.x, y: target.y, behavior: "watch", stateStartedAt: 0 }),
       martyn,
       initialSettings,
       bounds,
@@ -162,16 +345,46 @@ describe("follow mode", () => {
     expect(pouncing.behavior).toBe("pounce");
   });
 
-  it("does not pounce when pounce is disabled", () => {
-    const next = advanceCompanion(
-      runtimeFor("martyn", { x: 300, behavior: "watch", stateStartedAt: 0 }),
+  it("separates overlapping follow-mode pets", () => {
+    const separated = separateOverlaps(
+      [
+        runtimeFor("martyn", { x: 300, y: 200 }),
+        runtimeFor("charles", { x: 305, y: 205 })
+      ],
+      [martyn, charles],
+      initialSettings,
+      bounds
+    );
+
+    expect(Math.hypot(separated[0].x - separated[1].x, separated[0].y - separated[1].y)).toBeGreaterThan(20);
+  });
+
+  it("pounces near the assigned follow slot when the cursor idles", () => {
+    const stalking = advanceCompanion(
+      runtimeFor("martyn", { x: 370, y: 210, behavior: "watch", stateStartedAt: 0 }),
       martyn,
       initialSettings,
       bounds,
       16.67,
       100,
       () => 0.5,
-      { active: true, pounce: false, cursor: { x: 320, y: 300 }, cursorIdleMs: 5000 }
+      { active: true, pounce: true, cursor: { x: 450, y: 260 }, cursorIdleMs: 1500, targetIndex: 0 }
+    );
+
+    expect(stalking.behavior).toBe("stalk");
+  });
+
+  it("does not pounce when pounce is disabled", () => {
+    const target = getFollowTarget({ x: 320, y: 300 }, 0, getPetSize(martyn, initialSettings), bounds);
+    const next = advanceCompanion(
+      runtimeFor("martyn", { x: target.x, y: target.y, behavior: "watch", stateStartedAt: 0 }),
+      martyn,
+      initialSettings,
+      bounds,
+      16.67,
+      100,
+      () => 0.5,
+      { active: true, pounce: false, cursor: { x: 320, y: 300 }, cursorIdleMs: 5000, targetIndex: 0 }
     );
     expect(next.behavior).toBe("watch");
   });
