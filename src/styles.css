@@ -532,6 +532,65 @@ textarea:focus {
   }
 }
 
+/* Side-profile walk rig: swing diagonal leg pairs in opposite phase. */
+.rig-cat .leg {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+.pose-walk .leg-back-far,
+.pose-walk .leg-front-near {
+  animation: cat-step 0.5s ease-in-out infinite;
+}
+.pose-walk .leg-front-far,
+.pose-walk .leg-back-near {
+  animation: cat-step 0.5s ease-in-out infinite;
+  animation-delay: -0.25s;
+}
+.pose-walk .rig-tail {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: cat-tail 1s ease-in-out infinite;
+}
+.pose-walk .rig-body {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: cat-bob 0.5s ease-in-out infinite;
+}
+@keyframes cat-step {
+  0%,
+  100% {
+    transform: rotate(16deg);
+  }
+  50% {
+    transform: rotate(-16deg);
+  }
+}
+@keyframes cat-tail {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+@keyframes cat-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pose-walk .leg,
+  .pose-walk .rig-tail,
+  .pose-walk .rig-body {
+    animation: none;
+  }
+}
+
 .behavior-bar {
   display: grid;
   grid-template-columns: auto auto minmax(180px, 260px);

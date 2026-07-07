@@ -23,11 +23,20 @@ describe("PetAvatar custom cats", () => {
     expect(markup).toContain("pose-stretch");
   });
 
-  it("applies the shared walk-body animation class to Martyn and Charles when walking", () => {
+  it("routes Martyn and Charles to the side-profile walk rig when walking", () => {
     const martynMarkup = renderToStaticMarkup(<PetAvatar pet={martyn} behavior="walk" />);
     const charlesMarkup = renderToStaticMarkup(<PetAvatar pet={charles} behavior="walk" />);
 
-    expect(martynMarkup).toContain("pet-walk-body");
-    expect(charlesMarkup).toContain("pet-walk-body");
+    expect(martynMarkup).toContain("rig-cat");
+    expect(martynMarkup).toContain("pose-walk");
+    expect(charlesMarkup).toContain("rig-cat");
+    expect(charlesMarkup).toContain("pose-walk");
+  });
+
+  it("keeps the front-facing sticker for compact tray thumbnails even when walking", () => {
+    const markup = renderToStaticMarkup(<PetAvatar pet={martyn} behavior="walk" compact />);
+
+    expect(markup).toContain("martyn-avatar");
+    expect(markup).not.toContain("rig-cat");
   });
 });
